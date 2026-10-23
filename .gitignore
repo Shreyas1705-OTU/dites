@@ -11,6 +11,7 @@ next-env.d.ts
 
 # env and secrets
 .env
+.env*
 .env*.local
 .vercel/
 
@@ -26,3 +27,6 @@ test-results/
 # misc
 .DS_Store
 *.log
+
+# keys
+*.pem
