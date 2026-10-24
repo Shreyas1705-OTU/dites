@@ -1,7 +1,7 @@
 # Progress
 
 ## Current phase
-Phase 1: Foundation (done except the UptimeRobot monitor; then tag `v0.1-foundation`)
+Phase 2: Auth and core chat (planning). Phase 1 tagged `v0.1-foundation`
 
 ## Done
 - Phase 0: skills checked, UI UX Pro Max installed project-only (`docs/skills.md`)
@@ -21,10 +21,10 @@ Phase 1: Foundation (done except the UptimeRobot monitor; then tag `v0.1-foundat
 - Daily GitHub Actions keep-alive workflow (`.github/workflows/keep-alive.yml`); `HEALTH_URL` set, manual run passed
 - Deployed to Vercel Hobby: https://dites.vercel.app (`/api/health` returns ok)
 - README started: live link, dev setup, keep-alive design
+- UptimeRobot monitor on `/api/health` every 5 minutes (primary keep-alive)
 
 ## Next
-- Create the UptimeRobot monitor on https://dites.vercel.app/api/health, 5-minute interval
-- Tag `v0.1-foundation`, then plan Phase 2 (auth and core chat)
+- Plan Phase 2 (auth and core chat) in plan mode, then build
 
 ## Open issues
 - Cold `/api/health` latency 300-900 ms; if warm stays >200 ms, align the Vercel function region with the Supabase region
