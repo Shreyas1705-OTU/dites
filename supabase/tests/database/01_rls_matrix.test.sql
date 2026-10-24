@@ -66,7 +66,7 @@ insert into public.messages (id, room_id, user_id, body) values
 
 insert into private.bans (user_id, reason) values ('00000000-0000-0000-0000-00000000000d', 'test');
 
-select plan(48);
+select plan(49);
 
 -- ===========================================================================
 -- anon: no table access at all
@@ -221,7 +221,14 @@ delete from public.room_members where room_id = '10000000-0000-0000-0000-0000000
 select tests.act_as('00000000-0000-0000-0000-00000000000a');
 select lives_ok($$ insert into public.room_members (room_id, user_id) values ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-00000000000c') $$,
   'owner: adds a member to a private room');
+delete from public.room_members
+  where room_id = '10000000-0000-0000-0000-000000000002' and user_id = '00000000-0000-0000-0000-00000000000c';
+delete from public.room_members
+  where room_id = '10000000-0000-0000-0000-000000000002' and user_id = '00000000-0000-0000-0000-00000000000a';
 reset role;
+select results_eq($$ select user_id from public.room_members where room_id = '10000000-0000-0000-0000-000000000002' order by user_id $$,
+  $$ values ('00000000-0000-0000-0000-00000000000a'::uuid), ('00000000-0000-0000-0000-00000000000b'::uuid) $$,
+  'owner: removes a member, but cannot leave (orphan) their own room');
 select is((select count(*)::int from public.room_members where room_id = '10000000-0000-0000-0000-000000000003'), 2,
   'cannot leave or remove members from a DM');
 
