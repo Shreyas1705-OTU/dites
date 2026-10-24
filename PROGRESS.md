@@ -1,7 +1,7 @@
 # Progress
 
 ## Current phase
-Phase 1: Foundation (nearly done; waiting on Vercel + uptime monitor)
+Phase 1: Foundation (done except the UptimeRobot monitor; then tag `v0.1-foundation`)
 
 ## Done
 - Phase 0: skills checked, UI UX Pro Max installed project-only (`docs/skills.md`)
@@ -18,17 +18,16 @@ Phase 1: Foundation (nearly done; waiting on Vercel + uptime monitor)
 - pgTAP tests: 77 passing locally (`npx supabase test db --local`)
 - Security Advisor (cloud): only the intended `get_or_create_dm` warning; recorded in `docs/security.md`
 - `/api/health` route (200 ok / 503, `no-store`), verified against the cloud database
-- Daily GitHub Actions keep-alive workflow (`.github/workflows/keep-alive.yml`)
+- Daily GitHub Actions keep-alive workflow (`.github/workflows/keep-alive.yml`); `HEALTH_URL` set, manual run passed
+- Deployed to Vercel Hobby: https://dites.vercel.app (`/api/health` returns ok)
+- README started: live link, dev setup, keep-alive design
 
 ## Next
-- Import the repo into Vercel (Hobby), set `NEXT_PUBLIC_SUPABASE_URL` and
-  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, deploy
-- Set GitHub repo variable `HEALTH_URL` to `https://<domain>/api/health`, run the workflow once
-- Create a free uptime monitor (e.g. UptimeRobot) on `/api/health`, 5-minute interval
-- Document both keep-alive mechanisms in the README
+- Create the UptimeRobot monitor on https://dites.vercel.app/api/health, 5-minute interval
 - Tag `v0.1-foundation`, then plan Phase 2 (auth and core chat)
 
 ## Open issues
+- Cold `/api/health` latency 300-900 ms; if warm stays >200 ms, align the Vercel function region with the Supabase region
 - pgTAP tests cannot run against the cloud via `supabase test db --linked`: the CLI's
   temporary login role cannot create the `tests` schema. Needed by Phase 6/7 (CI role or db URL)
 - gitleaks not installed (needed for pre-commit secret scan)
