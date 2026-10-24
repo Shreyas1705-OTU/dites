@@ -7,9 +7,12 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-eb-garamond);
+  --color-bubble-mine: var(--bubble-mine);
+  --color-bubble-mine-foreground: var(--bubble-mine-foreground);
+  --color-online: var(--online);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,83 +51,104 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Ink & Paper, Lapis accent. Source of truth: design-system/dites/MASTER.md,
+ * where every pair below is listed with its measured contrast ratio.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --background: #F6F5F1;
+  --foreground: #1B1F2A;
+  --card: #FFFFFF;
+  --card-foreground: #1B1F2A;
+  --popover: #FFFFFF;
+  --popover-foreground: #1B1F2A;
+  --primary: #26619C;
+  --primary-foreground: #FFFFFF;
+  --secondary: #ECEAE4;
+  --secondary-foreground: #1B1F2A;
+  --muted: #ECEAE4;
+  --muted-foreground: #5A5F6B;
+  --accent: #E4E2DB;
+  --accent-foreground: #1B1F2A;
+  --destructive: #B42318;
+  --border: #DEDCD5;
+  --input: #858891;
+  --ring: #26619C;
+  --bubble-mine: #26619C;
+  --bubble-mine-foreground: #FFFFFF;
+  --online: #2F7D4F;
+  --chart-1: #26619C;
+  --chart-2: #5A86B8;
+  --chart-3: #8FAED2;
+  --chart-4: #5A5F6B;
+  --chart-5: #2F7D4F;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #EFEEE9;
+  --sidebar-foreground: #1B1F2A;
+  --sidebar-primary: #26619C;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E4E2DB;
+  --sidebar-accent-foreground: #1B1F2A;
+  --sidebar-border: #DEDCD5;
+  --sidebar-ring: #26619C;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #14161C;
+  --foreground: #ECEAE4;
+  --card: #1C1F27;
+  --card-foreground: #ECEAE4;
+  --popover: #1C1F27;
+  --popover-foreground: #ECEAE4;
+  --primary: #93B8E6;
+  --primary-foreground: #14161C;
+  --secondary: #252935;
+  --secondary-foreground: #ECEAE4;
+  --muted: #252935;
+  --muted-foreground: #A3A6AF;
+  --accent: #252935;
+  --accent-foreground: #ECEAE4;
+  --destructive: #F97066;
+  --border: #2A2E38;
+  --input: #6E727C;
+  --ring: #93B8E6;
+  --bubble-mine: #1E4C7E;
+  --bubble-mine-foreground: #EEF1F8;
+  --online: #5FBF84;
+  --chart-1: #93B8E6;
+  --chart-2: #6A93C7;
+  --chart-3: #4A6F9E;
+  --chart-4: #A3A6AF;
+  --chart-5: #5FBF84;
+  --sidebar: #181A21;
+  --sidebar-foreground: #ECEAE4;
+  --sidebar-primary: #93B8E6;
+  --sidebar-primary-foreground: #14161C;
+  --sidebar-accent: #252935;
+  --sidebar-accent-foreground: #ECEAE4;
+  --sidebar-border: #2A2E38;
+  --sidebar-ring: #93B8E6;
+  color-scheme: dark;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground;
   }
   html {
     @apply font-sans;
+  }
+  h1, h2, h3 {
+    @apply font-heading;
+    text-wrap: balance;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
