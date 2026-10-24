@@ -33,11 +33,8 @@ Phase 2: Auth and core chat (planning). Phase 1 tagged `v0.1-foundation`
 - gitleaks not installed (needed for pre-commit secret scan)
 - `npm install` reports install scripts pending approval (`npm approve-scripts`); review before Phase 2
 
-## Known UI issues (address at first screen)
-- MASTER.md loads fonts via Google Fonts `@import` (must use `next/font` for CSP)
-- No dark palette in MASTER.md
-- Primary button spec is white on emerald (3.77:1, fails AA)
-- Input border `#E4ECFC` is 1.19:1 (needs 3:1)
-- Hover `translateY` contradicts its own no-layout-shift rule
-- Landing page pattern (video demo) differs from spec (live `#general` preview)
-- Font choice open: Geist (already wired) vs Poppins/Open Sans
+## Design system
+- Ink & Paper with a Lapis accent, EB Garamond (display) + Geist (text) + Geist Mono.
+  Final spec with measured contrast ratios: `design-system/dites/MASTER.md`. All earlier
+  generated-file issues (Google Fonts import, no dark palette, failing contrast, hover
+  transforms, video landing pattern) are resolved there.
