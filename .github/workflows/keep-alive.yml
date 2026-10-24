@@ -1,0 +1,29 @@
+# Backup keep-alive. The primary pinger is an external uptime monitor hitting
+# /api/health every few minutes; this daily run makes sure Supabase never sees
+# 7 idle days even if that monitor stops. GitHub disables scheduled workflows
+# after 60 days without repository activity, so it is a backup, not the plan.
+name: Keep alive
+
+on:
+  schedule:
+    - cron: "17 9 * * *" # daily, off the hour to avoid GitHub's top-of-hour queue
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping /api/health
+        env:
+          HEALTH_URL: ${{ vars.HEALTH_URL }}
+        run: |
+          if [ -z "$HEALTH_URL" ]; then
+            echo "::error::Repository variable HEALTH_URL is not set"
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 20 \
+            --retry 3 --retry-delay 10 --retry-all-errors \
+            "$HEALTH_URL"
