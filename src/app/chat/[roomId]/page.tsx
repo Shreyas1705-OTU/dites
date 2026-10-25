@@ -3,7 +3,7 @@ import { Suspense } from "react";
 
 import { JoinRoom } from "@/components/chat/join-room";
 import { MembersDialog, type RoomMember } from "@/components/chat/members-dialog";
-import { MessageList } from "@/components/chat/message-list";
+import { RoomConversation } from "@/components/chat/room-conversation";
 import { RoomHeader } from "@/components/chat/room-header";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { fetchMessages, GENERAL_ROOM_ID, roomMention, roomTitle, type RoomType } from "@/lib/chat/data";
@@ -102,13 +102,18 @@ async function Room({ params }: Pick<PageProps<"/chat/[roomId]">, "params">) {
           )
         }
       />
-      <MessageList
+      <RoomConversation
         key={roomId}
         roomId={roomId}
-        currentUserId={user.id}
+        me={{ id: user.id, username: user.username, displayName: user.displayName }}
         initialMessages={messages}
         initialHasMore={hasMore}
-        emptyText={type === "dm" ? `This is the start of your conversation with ${title}.` : `Nobody has said anything in ${roomMention(room.id, room.name)} yet.`}
+        emptyText={
+          type === "dm"
+            ? `This is the start of your conversation with ${title}. Say hello.`
+            : `Nobody has said anything in ${roomMention(room.id, room.name)} yet. Be the first.`
+        }
+        placeholder={type === "dm" ? `Message ${title}` : `Message ${roomMention(room.id, room.name)}`}
       />
     </>
   );

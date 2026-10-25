@@ -1,17 +1,20 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
-import { Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Loader2, RotateCw } from "lucide-react";
+import { Fragment, useEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 
-import { fetchMessages, type ChatMessage } from "@/lib/chat/data";
-import { createClient } from "@/lib/supabase/client";
+import type { UiMessage } from "@/lib/chat/use-room-messages";
 
 type Props = {
-  roomId: string;
   currentUserId: string;
-  initialMessages: ChatMessage[]; // newest first
-  initialHasMore: boolean;
+  messages: UiMessage[]; // newest first
+  hasMore: boolean;
+  loadingOlder: boolean;
+  loadError: boolean;
+  onLoadOlder: () => void;
+  onRetry: (id: string) => void;
   emptyText: string;
+  scrollRef: RefObject<HTMLDivElement | null>;
 };
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
@@ -58,39 +61,29 @@ function sameDay(a: string, b: string) {
   return new Date(a).toDateString() === new Date(b).toDateString();
 }
 
-export function MessageList({ roomId, currentUserId, initialMessages, initialHasMore, emptyText }: Props) {
-  const [messages, setMessages] = useState(initialMessages);
-  const [hasMore, setHasMore] = useState(initialHasMore);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+export function MessageList({
+  currentUserId,
+  messages,
+  hasMore,
+  loadingOlder,
+  loadError,
+  onLoadOlder,
+  onRetry,
+  emptyText,
+  scrollRef,
+}: Props) {
   const sentinel = useRef<HTMLDivElement>(null);
-
-  const loadOlder = useCallback(async () => {
-    const oldest = messages.at(-1);
-    if (!oldest || loading || !hasMore) return;
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const page = await fetchMessages(createClient(), roomId, { createdAt: oldest.createdAt, id: oldest.id });
-      setMessages((current) => [...current, ...page.messages]);
-      setHasMore(page.hasMore);
-    } catch {
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [messages, loading, hasMore, roomId]);
 
   // Load the previous page when the top of the history scrolls into view.
   useEffect(() => {
     const el = sentinel.current;
     if (!el || !hasMore) return;
-    const observer = new IntersectionObserver((entries) => entries[0]?.isIntersecting && loadOlder(), {
+    const observer = new IntersectionObserver((entries) => entries[0]?.isIntersecting && onLoadOlder(), {
       rootMargin: "400px 0px 0px 0px",
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasMore, loadOlder]);
+  }, [hasMore, onLoadOlder]);
 
   if (messages.length === 0) {
     return (
@@ -105,6 +98,7 @@ export function MessageList({ roomId, currentUserId, initialMessages, initialHas
     // column-reverse: the browser anchors scrolling to the newest message,
     // and older pages added at the top don't push what you're reading.
     <div
+      ref={scrollRef}
       role="log"
       aria-label="Messages"
       aria-live="polite"
@@ -135,7 +129,7 @@ export function MessageList({ roomId, currentUserId, initialMessages, initialHas
                     mine
                       ? `bg-bubble-mine text-bubble-mine-foreground ${grouped ? "" : "rounded-tr-[4px]"}`
                       : `bg-secondary text-secondary-foreground ${grouped ? "" : "rounded-tl-[4px]"}`
-                  } ${message.deletedAt ? "italic opacity-70" : ""}`}
+                  } ${message.deletedAt ? "italic opacity-70" : ""} ${message.status ? "opacity-60" : ""}`}
                 >
                   {/* Plain text only: user content is never rendered as HTML. */}
                   {message.deletedAt ? "Message deleted" : message.body}
@@ -143,6 +137,22 @@ export function MessageList({ roomId, currentUserId, initialMessages, initialHas
                     <span className="ml-1.5 text-xs opacity-75">(edited)</span>
                   )}
                 </div>
+                {message.status === "pending" && (
+                  <span className="pt-1 text-xs text-muted-foreground">Sending…</span>
+                )}
+                {message.status === "failed" && (
+                  <span role="alert" className="flex items-center gap-2 pt-1 text-xs text-destructive">
+                    Not sent. {message.failReason}
+                    <button
+                      type="button"
+                      onClick={() => onRetry(message.id)}
+                      className="inline-flex cursor-pointer items-center gap-1 font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                    >
+                      <RotateCw className="size-3" aria-hidden="true" />
+                      Retry
+                    </button>
+                  </span>
+                )}
               </li>
               {newDay && (
                 <li>
@@ -155,9 +165,9 @@ export function MessageList({ roomId, currentUserId, initialMessages, initialHas
       </ol>
 
       <div ref={sentinel} className="flex justify-center py-3">
-        {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="Loading older messages" />}
+        {loadingOlder && <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="Loading older messages" />}
         {loadError && (
-          <button type="button" onClick={loadOlder} className="cursor-pointer text-sm text-primary underline-offset-4 hover:underline">
+          <button type="button" onClick={onLoadOlder} className="cursor-pointer text-sm text-primary underline-offset-4 hover:underline">
             Couldn&apos;t load older messages. Retry
           </button>
         )}

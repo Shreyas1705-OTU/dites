@@ -102,6 +102,65 @@ export async function fetchMessages(
   return { messages: rows.slice(0, PAGE_SIZE).map(toChatMessage), hasMore: rows.length > PAGE_SIZE };
 }
 
+export const MAX_MESSAGE_LENGTH = 2000;
+
+// Postgres char_length counts code points; JS .length counts UTF-16 units
+// (an emoji is 2). Count the way the database does.
+export function messageLength(body: string) {
+  return [...body].length;
+}
+
+export type SendResult = { ok: true; message: ChatMessage } | { ok: false; reason: string };
+
+async function fetchOwnMessage(supabase: Client, id: string): Promise<ChatMessage | null> {
+  const { data } = await supabase
+    .from("messages")
+    .select(MESSAGE_COLUMNS)
+    .eq("id", id)
+    .maybeSingle()
+    .overrideTypes<MessageRow, { merge: false }>();
+  return data ? toChatMessage(data) : null;
+}
+
+function sendErrorReason(error: { code?: string; message?: string }): string {
+  if (error.code === "PT429") return "Slow down: you can send 20 messages a minute.";
+  if (error.code === "42501") return "You can't send messages here.";
+  if (error.code === "23514") return `Messages can be up to ${MAX_MESSAGE_LENGTH.toLocaleString()} characters.`;
+  if (!error.code) return "Couldn't send. Check your connection.";
+  return "Couldn't send. Please try again.";
+}
+
+// Sends with a client-generated id, so a retry of the same message can never
+// create a duplicate: the id is the primary key. `isRetry` checks first
+// whether an earlier attempt already landed (its response may have been
+// lost); this matters because the rate-limit trigger runs before the
+// primary-key check, so a blind re-insert near the limit would report
+// "slow down" for a message that was actually sent.
+export async function sendMessage(
+  supabase: Client,
+  input: { id: string; roomId: string; body: string },
+  isRetry = false,
+): Promise<SendResult> {
+  if (isRetry) {
+    const existing = await fetchOwnMessage(supabase, input.id);
+    if (existing) return { ok: true, message: existing };
+  }
+
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({ id: input.id, room_id: input.roomId, body: input.body })
+    .select(MESSAGE_COLUMNS)
+    .single()
+    .overrideTypes<MessageRow, { merge: false }>();
+
+  if (data) return { ok: true, message: toChatMessage(data) };
+  if (error?.code === "23505") {
+    const existing = await fetchOwnMessage(supabase, input.id);
+    if (existing) return { ok: true, message: existing };
+  }
+  return { ok: false, reason: sendErrorReason(error ?? {}) };
+}
+
 export async function fetchMyRooms(supabase: Client, userId: string): Promise<RoomSummary[]> {
   const { data: memberships, error } = await supabase
     .from("room_members")
