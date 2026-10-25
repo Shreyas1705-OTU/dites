@@ -23,7 +23,8 @@ export default function ChatPage({ searchParams }: PageProps<"/chat">) {
 
 async function SignedInHome({ searchParams }: Pick<PageProps<"/chat">, "searchParams">) {
   const user = await getCurrentUser();
-  if (!user) redirect("/");
+  // Signed in (the proxy checked) but no profile: clear the stale session.
+  if (!user) redirect("/auth/reset");
 
   const params = await searchParams;
   const error = authErrorMessage(typeof params.auth_error === "string" ? params.auth_error : null);

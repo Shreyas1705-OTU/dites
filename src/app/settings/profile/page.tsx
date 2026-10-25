@@ -25,7 +25,8 @@ export default function ProfileSettingsPage({ searchParams }: PageProps<"/settin
 
 async function ProfileSettings({ searchParams }: Pick<PageProps<"/settings/profile">, "searchParams">) {
   const user = await getCurrentUser();
-  if (!user) redirect("/");
+  // Signed in (the proxy checked) but no profile: clear the stale session.
+  if (!user) redirect("/auth/reset");
   const { welcome } = await searchParams;
 
   return (

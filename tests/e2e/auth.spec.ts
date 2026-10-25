@@ -49,3 +49,29 @@ test("the callback shows a friendly message for a failed sign-in", async ({ page
   // Next.js keeps its own empty role="alert" route announcer, so match by text.
   await expect(page.getByRole("alert").filter({ hasText: /Sign-in was cancelled/ })).toBeVisible();
 });
+
+// Needs the local stack's secret key to delete a user mid-session:
+//   SUPABASE_SECRET_KEY=$(npx supabase status -o json | jq -r .SECRET_KEY) npx playwright test
+// Never committed; the test skips without it.
+test("a session whose account was deleted is cleared instead of looping", async ({ page }) => {
+  const secret = process.env.SUPABASE_SECRET_KEY;
+  test.skip(!secret, "SUPABASE_SECRET_KEY not set");
+  const api = "http://127.0.0.1:54321";
+  const headers = { apikey: secret!, Authorization: `Bearer ${secret}` };
+
+  await page.goto("/");
+  const guest = page.getByRole("button", { name: "Try as guest" });
+  await expect(guest).toBeEnabled({ timeout: 15_000 });
+  await guest.click();
+  await expect(page).toHaveURL(/\/chat$/);
+  const username = (await page.getByText(/@guest_[0-9a-f]{5}/).textContent())!.match(/guest_[0-9a-f]{5}/)![0];
+
+  const profiles = await (await fetch(`${api}/rest/v1/profiles?select=id&username=eq.${username}`, { headers })).json();
+  const res = await fetch(`${api}/auth/v1/admin/users/${profiles[0].id}`, { method: "DELETE", headers });
+  expect(res.ok).toBe(true);
+
+  // The access token is still valid, but the account is gone.
+  await page.goto("/chat");
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("heading", { name: "Join the conversation" })).toBeVisible();
+});

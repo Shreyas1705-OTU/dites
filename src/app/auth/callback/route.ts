@@ -33,6 +33,11 @@ export async function GET(request: NextRequest) {
   // Provider errors (e.g. identity_already_exists when linking) arrive as
   // query params; pass only the known code through, never free text.
   const providerError = searchParams.get("error_code");
+  if (providerError) {
+    // Server logs only: Supabase's description says why (e.g. "Unable to
+    // exchange external code" when a provider secret is wrong).
+    console.error("auth callback: provider error", providerError, searchParams.get("error_description"));
+  }
   const reason = providerError && /^[a-z_]{1,64}$/.test(providerError) ? providerError : "sign_in_failed";
   return NextResponse.redirect(new URL(`/?auth_error=${reason}`, origin));
 }
