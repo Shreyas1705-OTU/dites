@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { adminHeaders, currentUsername, LOCAL_API, openNav, SECRET_KEY, signInAsGuest } from "./helpers";
+
 test("signed-out visitors are sent from /chat to the sign-in screen", async ({ page }) => {
   await page.goto("/chat");
   await expect(page).toHaveURL(/\/\?next=%2Fchat$/);
@@ -7,22 +9,19 @@ test("signed-out visitors are sent from /chat to the sign-in screen", async ({ p
 });
 
 test("a guest signs in, edits their profile and signs out", async ({ page }) => {
-  await page.goto("/");
+  await signInAsGuest(page);
+  const nav = await openNav(page);
+  await expect(nav.getByText(/@guest_[0-9a-f]{5} · Guest/)).toBeVisible();
+  await expect(nav.getByRole("heading", { name: "You're chatting as a guest" })).toBeVisible();
 
-  // The guest button unlocks once Turnstile hands back a token.
-  const guest = page.getByRole("button", { name: "Try as guest" });
-  await expect(guest).toBeEnabled({ timeout: 15_000 });
-  await guest.click();
-
-  await expect(page).toHaveURL(/\/chat$/);
-  await expect(page.getByText(/@guest_[0-9a-f]{5} · Guest/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "You're chatting as a guest" })).toBeVisible();
+  await nav.getByRole("link", { name: "Profile settings" }).click();
+  await expect(page).toHaveURL(/\/settings\/profile$/);
 
   // Signed-in users skip the sign-in screen.
   await page.goto("/");
-  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page).toHaveURL(/\/chat\//);
+  await page.goto("/settings/profile");
 
-  await page.getByRole("link", { name: "Profile settings" }).click();
   const username = `e2e_${Math.random().toString(16).slice(2, 10)}`;
   await page.getByLabel("Display name").fill("E2E Tester");
   await page.getByLabel("Username").fill(username);
@@ -35,10 +34,11 @@ test("a guest signs in, edits their profile and signs out", async ({ page }) => 
   await expect(page.getByText("@admin is reserved. Try another.")).toBeVisible();
 
   await page.getByRole("link", { name: "Back to chat" }).click();
-  await expect(page.getByRole("heading", { name: "E2E Tester" })).toBeVisible();
-  await expect(page.getByText(`@${username} · Guest`)).toBeVisible();
+  const navAfter = await openNav(page);
+  await expect(navAfter.getByText("E2E Tester")).toBeVisible();
+  await expect(navAfter.getByText(`@${username} · Guest`)).toBeVisible();
 
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await navAfter.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL("/");
   await page.goto("/chat");
   await expect(page).toHaveURL(/\/\?next=/);
@@ -50,24 +50,19 @@ test("the callback shows a friendly message for a failed sign-in", async ({ page
   await expect(page.getByRole("alert").filter({ hasText: /Sign-in was cancelled/ })).toBeVisible();
 });
 
-// Needs the local stack's secret key to delete a user mid-session:
-//   SUPABASE_SECRET_KEY=$(npx supabase status -o json | jq -r .SECRET_KEY) npx playwright test
-// Never committed; the test skips without it.
 test("a session whose account was deleted is cleared instead of looping", async ({ page }) => {
-  const secret = process.env.SUPABASE_SECRET_KEY;
-  test.skip(!secret, "SUPABASE_SECRET_KEY not set");
-  const api = "http://127.0.0.1:54321";
-  const headers = { apikey: secret!, Authorization: `Bearer ${secret}` };
+  test.skip(!SECRET_KEY, "SUPABASE_SECRET_KEY not set");
 
-  await page.goto("/");
-  const guest = page.getByRole("button", { name: "Try as guest" });
-  await expect(guest).toBeEnabled({ timeout: 15_000 });
-  await guest.click();
-  await expect(page).toHaveURL(/\/chat$/);
-  const username = (await page.getByText(/@guest_[0-9a-f]{5}/).textContent())!.match(/guest_[0-9a-f]{5}/)![0];
+  await signInAsGuest(page);
+  const username = await currentUsername(page);
 
-  const profiles = await (await fetch(`${api}/rest/v1/profiles?select=id&username=eq.${username}`, { headers })).json();
-  const res = await fetch(`${api}/auth/v1/admin/users/${profiles[0].id}`, { method: "DELETE", headers });
+  const profiles = await (
+    await fetch(`${LOCAL_API}/rest/v1/profiles?select=id&username=eq.${username}`, { headers: adminHeaders() })
+  ).json();
+  const res = await fetch(`${LOCAL_API}/auth/v1/admin/users/${profiles[0].id}`, {
+    method: "DELETE",
+    headers: adminHeaders(),
+  });
   expect(res.ok).toBe(true);
 
   // The access token is still valid, but the account is gone.
