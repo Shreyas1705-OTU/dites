@@ -43,6 +43,16 @@ export async function updateSession(request: NextRequest) {
     return redirect;
   }
 
+  // Signed-in visitors skip the sign-in screen. Query params (such as an
+  // auth_error from a failed account link) carry over to /chat.
+  if (signedIn && pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/chat";
+    const redirect = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
+  }
+
   // Return this exact response: it carries the refreshed cookies.
   return response;
 }

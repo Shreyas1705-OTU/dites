@@ -1,18 +1,51 @@
+import { Suspense } from "react";
+
+import { SignInCard } from "@/components/auth/sign-in-card";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-// Placeholder until the sign-in screen lands later in Phase 2.
+// Sign-in screen (the full landing page arrives in Phase 4). Signed-in
+// visitors never see it: the proxy sends them straight to /chat.
 export default function Home() {
   return (
     <main className="flex flex-1 flex-col">
-      <header className="flex justify-end p-4">
+      <header className="flex items-center justify-between px-4 py-3 sm:px-6">
+        <span className="font-heading text-2xl font-semibold tracking-tight">Dites</span>
         <ThemeToggle />
       </header>
-      <section className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-4 px-4 pb-24">
-        <h1 className="text-6xl font-medium tracking-tight">Dites</h1>
-        <p className="text-lg text-muted-foreground">
-          A public, realtime chat. Sign-in and rooms are on the way.
-        </p>
-      </section>
+
+      <div className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-10 px-4 pt-6 pb-16 sm:px-6 md:grid-cols-[1.1fr_1fr] md:gap-16">
+        <section className="flex flex-col gap-5">
+          <p className="font-mono text-xs tracking-[0.08em] text-muted-foreground uppercase">
+            dites · /dit/ · French, &ldquo;say it&rdquo;
+          </p>
+          <h1 className="text-5xl leading-[1.02] font-medium tracking-tight sm:text-6xl">
+            Say it, and it&apos;s <em className="font-normal">already there.</em>
+          </h1>
+          <p className="max-w-[46ch] text-lg text-muted-foreground">
+            A public chat where messages arrive in real time. Open it in two tabs and watch them land.
+          </p>
+        </section>
+
+        <Suspense fallback={<SignInCardSkeleton />}>
+          <SignInCard />
+        </Suspense>
+      </div>
     </main>
+  );
+}
+
+// Same footprint as the card, so nothing shifts when it hydrates.
+function SignInCardSkeleton() {
+  return (
+    <div aria-hidden="true" className="flex w-full flex-col gap-5 rounded-[14px] border bg-card p-6 sm:p-8">
+      <div className="h-9 w-3/4 rounded-md bg-muted" />
+      <div className="h-4 w-full rounded bg-muted" />
+      <div className="flex flex-col gap-3">
+        <div className="h-11 rounded-lg bg-muted" />
+        <div className="h-5" />
+        <div className="h-11 rounded-lg bg-muted" />
+        <div className="h-11 rounded-lg bg-muted" />
+      </div>
+    </div>
   );
 }

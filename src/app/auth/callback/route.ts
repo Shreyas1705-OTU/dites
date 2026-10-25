@@ -18,9 +18,14 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(new URL(next, origin));
+      // A brand-new account gets one stop at profile setup to confirm the
+      // username we generated. Guests linking an account are not new.
+      const user = data.user;
+      const isNew = Date.now() - Date.parse(user.created_at) < 2 * 60 * 1000 && !user.is_anonymous;
+      const target = isNew ? `/settings/profile?welcome=1` : next;
+      return NextResponse.redirect(new URL(target, origin));
     }
     console.error("auth callback: code exchange failed", error.code);
   }
