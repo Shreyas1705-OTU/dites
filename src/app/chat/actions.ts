@@ -58,6 +58,8 @@ export async function createRoom(_prev: ActionResult, formData: FormData): Promi
     .single();
 
   if (isRateLimited(error)) return { error: "You can create 5 rooms an hour. Try again later." };
+  if (error?.code === "23505") return { error: `#${name} already exists. Pick another name.` };
+  if (error?.code === "23514") return { error: `#${name} is reserved. Pick another name.` };
   if (error || !data) return { error: "Couldn't create the room. Please try again." };
 
   revalidatePath("/chat", "layout");
