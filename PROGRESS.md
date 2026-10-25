@@ -33,6 +33,16 @@ Phase 2: Auth and core chat (planning). Phase 1 tagged `v0.1-foundation`
 - gitleaks not installed (needed for pre-commit secret scan)
 - `npm install` reports install scripts pending approval (`npm approve-scripts`); review before Phase 2
 
+## Decisions
+- **Reports (decided 2026-10-25):** reports go to an admin queue and an admin acts on each one:
+  ban a registered user (`private.bans`), or delete a guest account with its messages (server
+  route with the secret key). Reports never trigger automatic bans. Report button in Phase 3,
+  admin queue and actions in Phase 5.
+- **People search:** type-ahead from the first letter on display name or username; lists
+  registered users only. A guest appears only when their exact `guest_xxxxx` name is typed.
+- **Private rooms:** owners add and remove members by username; only registered users can be
+  added (guests are limited to public rooms and DMs, enforced by RLS). Invite links: Phase 13.
+
 ## Design system
 - Ink & Paper with a Lapis accent, EB Garamond (display) + Geist (text) + Geist Mono.
   Final spec with measured contrast ratios: `design-system/dites/MASTER.md`. All earlier
