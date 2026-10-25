@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
 
@@ -10,6 +11,10 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
 // signature) or getUser() (asks the Auth server). Never trust getSession() on
 // the server: it decodes the cookie without verifying it.
 export async function createClient() {
+  // Session checks compare token expiry with the current time, so they must
+  // run per request. connection() tells Cache Components not to prerender
+  // past this point (otherwise Next flags the Date.now() inside auth-js).
+  await connection();
   const cookieStore = await cookies();
 
   return createServerClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
