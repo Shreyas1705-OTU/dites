@@ -87,7 +87,9 @@ select results_eq($$ select name from public.rooms
                '10000000-0000-0000-0000-000000000003', '00000000-0000-4000-8000-000000000001')
   order by name $$, array['general', 'pub'],
   'outsider: sees public rooms only (#general and pub), not private rooms or DMs');
-select is_empty($$ select 1 from public.messages $$,
+-- Message reads are scoped to this file's fixture rooms: every user is also
+-- auto-joined to Global chat, which may hold messages from other test runs.
+select is_empty($$ select 1 from public.messages where room_id in ('10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000003') $$,
   'outsider: reads no messages (not a member of any room)');
 select is_empty($$ select 1 from public.room_members
   where room_id in ('10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000003') $$,
@@ -95,12 +97,12 @@ select is_empty($$ select 1 from public.room_members
 select isnt_empty($$ select 1 from public.profiles $$, 'registered: can read profiles');
 
 select tests.act_as('00000000-0000-0000-0000-00000000000b'); -- bob
-select results_eq($$ select body from public.messages order by body $$,
+select results_eq($$ select body from public.messages where room_id in ('10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000003') order by body $$,
   array['dm hello', 'private hello'],
   'member: reads messages in own private room and DM only');
 
 select tests.act_as('00000000-0000-0000-0000-00000000000e', true); -- gina, guest
-select results_eq($$ select body from public.messages $$, array['public hello'],
+select results_eq($$ select body from public.messages where room_id in ('10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000003') $$, array['public hello'],
   'guest: reads only rooms they belong to');
 
 -- ===========================================================================

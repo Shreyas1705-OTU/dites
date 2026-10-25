@@ -42,7 +42,7 @@ select lives_ok(
   'a guest can post in #general right after signup');
 
 select tests.act_as('00000000-0000-0000-0000-00000000000a');
-select results_eq($$ select body from public.messages $$, array['hi from a guest'],
+select results_eq($$ select body from public.messages where user_id = '00000000-0000-0000-0000-00000000000e' $$, array['hi from a guest'],
   'members read each other''s messages in #general');
 update public.rooms set name = 'hijacked' where id = '00000000-0000-4000-8000-000000000001';
 reset role;
