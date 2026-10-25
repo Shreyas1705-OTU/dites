@@ -26,7 +26,9 @@ Phase 1 tagged `v0.1-foundation`. Last session ended 2026-10-25.
 ## Next
 1. **Deploy step 3 extras** (not yet live): `npx supabase db push --linked`
    (`20261025011243_private_room_members.sql`), then `supabase db advisors --linked`, then
-   `git push`. Always database first, then code.
+   `git push`. Always database first, then code. Also waiting in the push: the room everyone
+   starts in shown as "Global chat" (globe icon), and the larger, centred "Dites" name on the
+   sign-in page.
 2. **Manual check on production** with GitHub/Google: create a public and a private room, add the
    Google account through Members, confirm it sees the room after refresh, remove it. Also look
    at the sidebar, phone drawer, Browse rooms and New message in light and dark.
