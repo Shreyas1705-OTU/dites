@@ -66,7 +66,7 @@ insert into public.messages (id, room_id, user_id, body) values
 
 insert into private.bans (user_id, reason) values ('00000000-0000-0000-0000-00000000000d', 'test');
 
-select plan(49);
+select plan(50);
 
 -- ===========================================================================
 -- anon: no table access at all
@@ -227,6 +227,8 @@ delete from public.room_members where room_id = '10000000-0000-0000-0000-0000000
 select tests.act_as('00000000-0000-0000-0000-00000000000a');
 select lives_ok($$ insert into public.room_members (room_id, user_id) values ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-00000000000c') $$,
   'owner: adds a member to a private room');
+select throws_ok($$ insert into public.room_members (room_id, user_id) values ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-00000000000e') $$,
+  '42501', null, 'owner: cannot add a guest to a private room');
 delete from public.room_members
   where room_id = '10000000-0000-0000-0000-000000000002' and user_id = '00000000-0000-0000-0000-00000000000c';
 delete from public.room_members
