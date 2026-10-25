@@ -100,7 +100,7 @@ export function CreateRoomDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl font-medium">Create a room</DialogTitle>
-          <DialogDescription>You&apos;ll be its owner. You can create up to 5 rooms an hour.</DialogDescription>
+          <DialogDescription>A public room anyone signed in can join. You&apos;ll be its owner.</DialogDescription>
         </DialogHeader>
         <form action={action} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
@@ -127,23 +127,8 @@ export function CreateRoomDialog() {
             </label>
             <Input id="room-description" name="description" maxLength={200} autoComplete="off" />
           </div>
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1.5 text-sm font-medium">Who can join</legend>
-            <label className="flex cursor-pointer items-start gap-2.5 text-sm">
-              <input type="radio" name="type" value="public" defaultChecked className="mt-0.5 size-4 accent-primary" />
-              <span>
-                <span className="font-medium">Public</span>
-                <span className="block text-muted-foreground">Anyone signed in can find and join it.</span>
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-2.5 text-sm">
-              <input type="radio" name="type" value="private" className="mt-0.5 size-4 accent-primary" />
-              <span>
-                <span className="font-medium">Private</span>
-                <span className="block text-muted-foreground">Only people you add can see it.</span>
-              </span>
-            </label>
-          </fieldset>
+          {/* Public only for now: private rooms need an "add member" flow first. */}
+          <input type="hidden" name="type" value="public" />
           <ErrorText>{state?.error}</ErrorText>
           <Button type="submit" disabled={pending} className="self-end">
             {pending && <Loader2 className="animate-spin" aria-hidden="true" />}
