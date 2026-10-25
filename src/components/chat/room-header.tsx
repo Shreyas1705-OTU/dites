@@ -10,9 +10,10 @@ type Props = {
   type: RoomType;
   title: string;
   subtitle?: string | null;
+  actions?: React.ReactNode;
 };
 
-export function RoomHeader({ type, title, subtitle }: Props) {
+export function RoomHeader({ type, title, subtitle, actions }: Props) {
   const { openNav } = useChatNav();
   const Icon = type === "private" ? Lock : Hash;
 
@@ -22,10 +23,11 @@ export function RoomHeader({ type, title, subtitle }: Props) {
         <Menu aria-hidden="true" />
       </Button>
       {type !== "dm" && <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
-      <div className="flex min-w-0 items-baseline gap-2">
+      <div className="flex min-w-0 flex-1 items-baseline gap-2">
         <h1 className="truncate font-heading text-xl leading-none font-semibold">{title}</h1>
         {subtitle && <p className="hidden truncate text-sm text-muted-foreground sm:block">{subtitle}</p>}
       </div>
+      {actions}
     </header>
   );
 }

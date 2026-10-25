@@ -100,7 +100,7 @@ export function CreateRoomDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl font-medium">Create a room</DialogTitle>
-          <DialogDescription>A public room anyone signed in can join. You&apos;ll be its owner.</DialogDescription>
+          <DialogDescription>You&apos;ll be its owner. You can create up to 5 rooms an hour.</DialogDescription>
         </DialogHeader>
         <form action={action} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
@@ -127,8 +127,25 @@ export function CreateRoomDialog() {
             </label>
             <Input id="room-description" name="description" maxLength={200} autoComplete="off" />
           </div>
-          {/* Public only for now: private rooms need an "add member" flow first. */}
-          <input type="hidden" name="type" value="public" />
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1.5 text-sm font-medium">Who can join</legend>
+            <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+              <input type="radio" name="type" value="public" defaultChecked className="mt-0.5 size-4 accent-primary" />
+              <span>
+                <span className="font-medium">Public</span>
+                <span className="block text-muted-foreground">Anyone signed in can find and join it.</span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+              <input type="radio" name="type" value="private" className="mt-0.5 size-4 accent-primary" />
+              <span>
+                <span className="font-medium">Private</span>
+                <span className="block text-muted-foreground">
+                  Only people you add can see it. You can add anyone with a GitHub or Google account.
+                </span>
+              </span>
+            </label>
+          </fieldset>
           <ErrorText>{state?.error}</ErrorText>
           <Button type="submit" disabled={pending} className="self-end">
             {pending && <Loader2 className="animate-spin" aria-hidden="true" />}
@@ -153,7 +170,7 @@ export function NewDmDialog() {
 
   // Debounced search; stale responses are ignored.
   useEffect(() => {
-    if (query.trim().length < 2) return;
+    if (query.trim().length < 1) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
       setSearching(true);
@@ -169,7 +186,7 @@ export function NewDmDialog() {
     };
   }, [query]);
 
-  const shown = query.trim().length < 2 ? [] : matches;
+  const shown = query.trim().length < 1 ? [] : matches;
 
   function open(user: UserMatch) {
     setPendingId(user.id);
@@ -191,21 +208,17 @@ export function NewDmDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl font-medium">New message</DialogTitle>
-          <DialogDescription>Find someone by their username.</DialogDescription>
+          <DialogDescription>Start typing a name or username.</DialogDescription>
         </DialogHeader>
         <div className="relative">
-          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
-            @
-          </span>
           <Input
-            aria-label="Username"
+            aria-label="Name or username"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="username"
+            placeholder="Name or @username"
             autoComplete="off"
             autoCapitalize="none"
             spellCheck={false}
-            className="pl-7"
           />
         </div>
         <ErrorText>{error}</ErrorText>
@@ -232,8 +245,8 @@ export function NewDmDialog() {
               </button>
             </li>
           ))}
-          {query.trim().length >= 2 && !searching && shown.length === 0 && (
-            <li className="px-2 py-3 text-sm text-muted-foreground">No one with a username starting “{query.trim()}”.</li>
+          {query.trim().length >= 1 && !searching && shown.length === 0 && (
+            <li className="px-2 py-3 text-sm text-muted-foreground">No one found starting with “{query.trim()}”.</li>
           )}
         </ul>
       </DialogContent>

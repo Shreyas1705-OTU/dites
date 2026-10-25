@@ -120,3 +120,45 @@ test("/chat opens #general", async ({ page }) => {
   await page.goto("/chat");
   await expect(page).toHaveURL(new RegExp(`/chat/${GENERAL_ROOM_ID}$`));
 });
+
+test("people search lists registered users from the first letter, not guests", async ({ page, browser }) => {
+  test.skip(!SECRET_KEY, "SUPABASE_SECRET_KEY not set");
+  // A registered user (as if they'd signed in with GitHub), with a unique name.
+  const tag = Math.random().toString(36).slice(2, 7);
+  const created = await fetch(`${LOCAL_API}/auth/v1/admin/users`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      email: `zz${tag}@example.test`,
+      email_confirm: true,
+      user_metadata: { user_name: `zz${tag}`, full_name: `Zelda ${tag}` },
+      app_metadata: { provider: "github" },
+    }),
+  });
+  expect(created.ok).toBe(true);
+  const registered = await created.json();
+
+  const other = await (await browser.newContext()).newPage();
+  await signInAsGuest(other);
+  const guestName = await currentUsername(other);
+
+  await signInAsGuest(page);
+  const nav = await openNav(page);
+  await nav.getByRole("button", { name: "New direct message" }).click();
+  const dialog = page.getByRole("dialog", { name: "New message" });
+  const search = dialog.getByLabel("Name or username");
+
+  // Display name prefix, then username prefix.
+  await search.fill(`Zelda ${tag}`.slice(0, 7));
+  await expect(dialog.getByRole("button", { name: new RegExp(`Zelda ${tag}`) })).toBeVisible();
+  await search.fill(`zz${tag}`.slice(0, 3));
+  await expect(dialog.getByRole("button", { name: new RegExp(`@zz${tag}`) })).toBeVisible();
+
+  // Guests never show up for partial matches, only for their exact name.
+  await search.fill("guest_");
+  await expect(dialog.getByText("No one found starting with “guest_”.")).toBeVisible();
+  await search.fill(guestName);
+  await expect(dialog.getByRole("button", { name: new RegExp(guestName) })).toBeVisible();
+
+  await fetch(`${LOCAL_API}/auth/v1/admin/users/${registered.id}`, { method: "DELETE", headers: adminHeaders() });
+});

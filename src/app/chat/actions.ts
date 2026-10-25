@@ -66,25 +66,74 @@ export async function createRoom(_prev: ActionResult, formData: FormData): Promi
   redirect(`/chat/${data.id}`);
 }
 
-export type UserMatch = { id: string; username: string; displayName: string };
+export type UserMatch = { id: string; username: string; displayName: string; isGuest: boolean };
 
+const GUEST_USERNAME = /^guest_[0-9a-f]{5}$/;
+const SEARCH_LIMIT = 8;
+
+// Escape LIKE wildcards so "%" or "_" in a search mean themselves.
+const likePrefix = (q: string) => `${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+
+// Type-ahead people search: matches the start of a display name or username
+// from the first letter. Lists registered users only; a guest shows up only
+// when their exact guest_xxxxx name is typed. Runs under RLS (profiles are
+// readable by anyone signed in, and hold no emails).
 export async function searchUsers(query: string): Promise<UserMatch[]> {
-  // Usernames are [a-z0-9_]; anything else can't match, and stripping it also
-  // keeps LIKE wildcards (% and _) out of the pattern. "_" is escaped below.
-  const q = query.trim().toLowerCase().replace(/^@/, "").replace(/[^a-z0-9_]/g, "").slice(0, 20);
-  if (q.length < 2) return [];
+  const q = query.trim().replace(/^@/, "").slice(0, 30);
+  if (q.length < 1) return [];
   const { supabase, userId } = await requireUserId();
   if (!userId) return [];
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, username, display_name")
-    .ilike("username", `${q.replace(/_/g, "\\_")}%`)
-    .neq("id", userId)
-    .order("username")
-    .limit(6);
+  const columns = "id, username, display_name, is_guest";
+  const pattern = likePrefix(q);
+  const [byUsername, byName, guest] = await Promise.all([
+    supabase.from("profiles").select(columns).eq("is_guest", false).neq("id", userId)
+      .ilike("username", pattern).limit(SEARCH_LIMIT),
+    supabase.from("profiles").select(columns).eq("is_guest", false).neq("id", userId)
+      .ilike("display_name", pattern).limit(SEARCH_LIMIT),
+    GUEST_USERNAME.test(q.toLowerCase())
+      ? supabase.from("profiles").select(columns).eq("username", q.toLowerCase()).neq("id", userId).limit(1)
+      : Promise.resolve({ data: [] }),
+  ]);
 
-  return (data ?? []).map((p) => ({ id: p.id, username: p.username, displayName: p.display_name ?? p.username }));
+  const byId = new Map<string, UserMatch>();
+  for (const p of [...(byUsername.data ?? []), ...(byName.data ?? []), ...(guest.data ?? [])]) {
+    byId.set(p.id, { id: p.id, username: p.username, displayName: p.display_name ?? p.username, isGuest: p.is_guest });
+  }
+  return [...byId.values()]
+    .sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: "base" }))
+    .slice(0, SEARCH_LIMIT);
+}
+
+export async function addMember(roomId: string, memberId: string): Promise<ActionResult> {
+  if (!UUID.test(roomId) || !UUID.test(memberId)) return { error: "Couldn't add that person." };
+  const { supabase, userId } = await requireUserId();
+  if (!userId) return { error: "Your session ended. Sign in again." };
+
+  // RLS allows this only for the owner of a private room, and only for a
+  // registered user. Everyone else is refused by the database.
+  const { error } = await supabase.from("room_members").insert({ room_id: roomId, user_id: memberId });
+  if (error?.code === "23505") return { error: "They're already in this room." };
+  if (error) return { error: "Only the room owner can add people, and guests can't join private rooms." };
+
+  revalidatePath(`/chat/${roomId}`);
+}
+
+export async function removeMember(roomId: string, memberId: string): Promise<ActionResult> {
+  if (!UUID.test(roomId) || !UUID.test(memberId)) return { error: "Couldn't remove that person." };
+  const { supabase, userId } = await requireUserId();
+  if (!userId) return { error: "Your session ended. Sign in again." };
+
+  const { data, error } = await supabase
+    .from("room_members")
+    .delete()
+    .eq("room_id", roomId)
+    .eq("user_id", memberId)
+    .select("user_id");
+  // RLS turns a disallowed delete into "0 rows", not an error.
+  if (error || !data?.length) return { error: "Only the room owner can remove people." };
+
+  revalidatePath(`/chat/${roomId}`);
 }
 
 export async function startDm(otherUserId: string): Promise<ActionResult> {
