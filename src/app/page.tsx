@@ -8,9 +8,13 @@ import { ThemeToggle } from "@/components/theme-toggle";
 export default function Home() {
   return (
     <main className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between px-4 py-3 sm:px-6">
-        <span className="font-heading text-2xl font-semibold tracking-tight">Dites</span>
-        <ThemeToggle />
+      {/* Three columns keep the name centred on the page, not between edge and toggle. */}
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center px-4 py-4 sm:px-6">
+        <span aria-hidden="true" />
+        <span className="font-heading text-4xl font-semibold tracking-tight">Dites</span>
+        <div className="justify-self-end">
+          <ThemeToggle />
+        </div>
       </header>
 
       <div className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-10 px-4 pt-6 pb-16 sm:px-6 md:grid-cols-[1.1fr_1fr] md:gap-16">
