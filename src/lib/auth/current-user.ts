@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 
 export type CurrentUser = {
@@ -11,7 +13,8 @@ export type CurrentUser = {
 // access token's signature, so the user id cannot be forged by editing the
 // cookie. Guest status comes from the signed `is_anonymous` claim, never from
 // user_metadata (which users can edit).
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+// cache(): the layout and the page share one lookup per request.
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
@@ -30,4 +33,4 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     username: profile.username,
     displayName: profile.display_name ?? profile.username,
   };
-}
+});

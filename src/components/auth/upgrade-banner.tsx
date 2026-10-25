@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { GitHubIcon, GoogleIcon } from "@/components/auth/provider-icons";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,8 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 // Guests keep their user id (and so their messages) by linking an OAuth
 // identity to the anonymous user. Supabase then clears is_anonymous, and a
 // database trigger flips profiles.is_guest to false.
-export function UpgradeBanner() {
+export function UpgradeBanner({ compact = false }: { compact?: boolean }) {
+  const titleId = useId();
   const [pending, setPending] = useState<"github" | "google" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,11 +32,15 @@ export function UpgradeBanner() {
 
   return (
     <section
-      aria-labelledby="upgrade-title"
-      className="flex flex-col gap-3 rounded-[14px] border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+      aria-labelledby={titleId}
+      className={
+        compact
+          ? "flex flex-col gap-2.5 rounded-xl border bg-card p-3"
+          : "flex flex-col gap-3 rounded-[14px] border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+      }
     >
       <div className="flex flex-col gap-1">
-        <h2 id="upgrade-title" className="font-sans text-sm font-semibold">
+        <h2 id={titleId} className="font-sans text-sm font-semibold">
           You&apos;re chatting as a guest
         </h2>
         <p className="text-sm text-muted-foreground">
@@ -47,14 +52,14 @@ export function UpgradeBanner() {
           </p>
         )}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => link("github")} disabled={pending !== null}>
+      <div className={compact ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2"}>
+        <Button variant="outline" size={compact ? "sm" : "default"} onClick={() => link("github")} disabled={pending !== null}>
           {pending === "github" ? <Loader2 className="animate-spin" aria-hidden="true" /> : <GitHubIcon />}
-          Keep with GitHub
+          {compact ? "GitHub" : "Keep with GitHub"}
         </Button>
-        <Button variant="outline" onClick={() => link("google")} disabled={pending !== null}>
+        <Button variant="outline" size={compact ? "sm" : "default"} onClick={() => link("google")} disabled={pending !== null}>
           {pending === "google" ? <Loader2 className="animate-spin" aria-hidden="true" /> : <GoogleIcon />}
-          Keep with Google
+          {compact ? "Google" : "Keep with Google"}
         </Button>
       </div>
     </section>
