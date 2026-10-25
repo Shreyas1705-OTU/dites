@@ -19,10 +19,10 @@ export default function Home() {
             dites · /dit/ · French, &ldquo;say it&rdquo;
           </p>
           <h1 className="text-5xl leading-[1.02] font-medium tracking-tight sm:text-6xl">
-            Say it, and it&apos;s <em className="font-normal">already there.</em>
+            Say it, share it, <em className="font-normal">dites it.</em>
           </h1>
           <p className="max-w-[46ch] text-lg text-muted-foreground">
-            A public chat where messages arrive in real time. Open it in two tabs and watch them land.
+            Easy, real-time and secure messaging, right in your browser.
           </p>
         </section>
 
