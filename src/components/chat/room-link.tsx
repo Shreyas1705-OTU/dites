@@ -1,14 +1,14 @@
 "use client";
 
-import { Hash, Lock } from "lucide-react";
+import { Globe, Hash, Lock } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import type { RoomSummary } from "@/lib/chat/data";
+import { GENERAL_ROOM_ID, type RoomSummary } from "@/lib/chat/data";
 
 export function RoomLink({ room }: { room: RoomSummary }) {
   const active = usePathname() === `/chat/${room.id}`;
-  const Icon = room.type === "private" ? Lock : Hash;
+  const Icon = room.id === GENERAL_ROOM_ID ? Globe : room.type === "private" ? Lock : Hash;
 
   return (
     <Link

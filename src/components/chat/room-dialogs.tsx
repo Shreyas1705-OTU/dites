@@ -1,6 +1,6 @@
 "use client";
 
-import { Hash, Loader2, Plus, Search, SquarePen } from "lucide-react";
+import { Globe, Hash, Loader2, Plus, Search, SquarePen } from "lucide-react";
 import { useActionState, useEffect, useState, useTransition } from "react";
 
 import { createRoom, joinRoom, searchUsers, startDm, type UserMatch } from "@/app/chat/actions";
@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { GENERAL_ROOM_ID } from "@/lib/chat/data";
 import { normalizeRoomName } from "@/lib/chat/room-name";
 
 function ErrorText({ children }: { children?: string }) {
@@ -61,7 +62,11 @@ export function BrowseRoomsDialog({ rooms, joinedIds }: { rooms: PublicRoom[]; j
         <ul className="-mx-2 flex max-h-[50vh] flex-col overflow-y-auto">
           {rooms.map((room) => (
             <li key={room.id} className="flex items-center gap-3 rounded-lg px-2 py-2.5">
-              <Hash className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              {room.id === GENERAL_ROOM_ID ? (
+                <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              ) : (
+                <Hash className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              )}
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate font-medium">{room.name}</span>
                 {room.description && (

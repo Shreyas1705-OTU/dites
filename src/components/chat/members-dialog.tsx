@@ -17,7 +17,7 @@ export type RoomMember = {
 
 type Props = {
   roomId: string;
-  roomName: string;
+  title: string;
   isPrivate: boolean;
   isOwner: boolean;
   currentUserId: string;
@@ -36,7 +36,7 @@ function Avatar({ name }: { name: string }) {
   );
 }
 
-export function MembersDialog({ roomId, roomName, isPrivate, isOwner, currentUserId, members, total }: Props) {
+export function MembersDialog({ roomId, title, isPrivate, isOwner, currentUserId, members, total }: Props) {
   const canManage = isPrivate && isOwner;
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<UserMatch[]>([]);
@@ -80,7 +80,7 @@ export function MembersDialog({ roomId, roomName, isPrivate, isOwner, currentUse
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="font-heading text-2xl font-medium">Members of #{roomName}</DialogTitle>
+          <DialogTitle className="font-heading text-2xl font-medium">Members of {title}</DialogTitle>
           <DialogDescription>
             {canManage
               ? "Add people with a GitHub or Google account. Only you, the owner, can add or remove members."

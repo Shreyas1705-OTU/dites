@@ -2,12 +2,15 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { JoinRoom } from "@/components/chat/join-room";
+import { MembersDialog, type RoomMember } from "@/components/chat/members-dialog";
 import { MessageList } from "@/components/chat/message-list";
 import { RoomHeader } from "@/components/chat/room-header";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { fetchMessages, type RoomType } from "@/lib/chat/data";
+import { fetchMessages, GENERAL_ROOM_ID, roomMention, roomTitle, type RoomType } from "@/lib/chat/data";
 import { createClient } from "@/lib/supabase/server";
 
+// Big rooms show the first members and a count.
+const MEMBER_LIST_LIMIT = 100;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function RoomPage({ params }: PageProps<"/chat/[roomId]">) {
@@ -39,13 +42,13 @@ async function Room({ params }: Pick<PageProps<"/chat/[roomId]">, "params">) {
     if (type !== "public") notFound();
     return (
       <>
-        <RoomHeader type={type} title={room.name ?? "room"} subtitle={room.description} />
+        <RoomHeader type={type} title={roomTitle(room.id, room.name)} subtitle={room.description} isGlobal={room.id === GENERAL_ROOM_ID} />
         <JoinRoom roomId={room.id} name={room.name ?? "room"} description={room.description} />
       </>
     );
   }
 
-  let title = room.name ?? "room";
+  let title = roomTitle(room.id, room.name);
   let subtitle = room.description;
   if (type === "dm") {
     const { data: other } = await supabase
@@ -58,18 +61,54 @@ async function Room({ params }: Pick<PageProps<"/chat/[roomId]">, "params">) {
     subtitle = other?.profile ? `@${other.profile.username}` : null;
   }
 
-  const { messages, hasMore } = await fetchMessages(supabase, roomId);
+  const [{ messages, hasMore }, membersResult] = await Promise.all([
+    fetchMessages(supabase, roomId),
+    type === "dm"
+      ? Promise.resolve(null)
+      : supabase
+          .from("room_members")
+          .select("user_id, role, profile:profiles(username, display_name)", { count: "exact" })
+          .eq("room_id", roomId)
+          .order("role", { ascending: false }) // owner first
+          .order("joined_at")
+          .limit(MEMBER_LIST_LIMIT),
+  ]);
+
+  const members: RoomMember[] = (membersResult?.data ?? []).map((m) => ({
+    id: m.user_id,
+    username: m.profile?.username ?? "unknown",
+    displayName: m.profile?.display_name ?? m.profile?.username ?? "unknown",
+    role: m.role === "owner" ? "owner" : "member",
+  }));
 
   return (
     <>
-      <RoomHeader type={type} title={title} subtitle={subtitle} />
+      <RoomHeader
+        type={type}
+        title={title}
+        subtitle={subtitle}
+        isGlobal={room.id === GENERAL_ROOM_ID}
+        actions={
+          type !== "dm" && (
+            <MembersDialog
+              roomId={roomId}
+              title={roomMention(room.id, room.name)}
+              isPrivate={type === "private"}
+              isOwner={membership.role === "owner"}
+              currentUserId={user.id}
+              members={members}
+              total={membersResult?.count ?? members.length}
+            />
+          )
+        }
+      />
       <MessageList
         key={roomId}
         roomId={roomId}
         currentUserId={user.id}
         initialMessages={messages}
         initialHasMore={hasMore}
-        emptyText={type === "dm" ? `This is the start of your conversation with ${title}.` : `Nobody has said anything in #${title} yet.`}
+        emptyText={type === "dm" ? `This is the start of your conversation with ${title}.` : `Nobody has said anything in ${roomMention(room.id, room.name)} yet.`}
       />
     </>
   );

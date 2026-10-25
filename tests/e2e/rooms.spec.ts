@@ -10,17 +10,17 @@ import {
   signInAsGuest,
 } from "./helpers";
 
-test("a new guest lands in #general and cannot create rooms", async ({ page }) => {
+test("a new guest lands in Global chat and cannot create rooms", async ({ page }) => {
   await signInAsGuest(page);
-  await expect(page.getByRole("heading", { level: 1, name: "general" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Global chat" })).toBeVisible();
 
   const nav = await openNav(page);
-  await expect(nav.getByRole("link", { name: "general" })).toHaveAttribute("aria-current", "page");
+  await expect(nav.getByRole("link", { name: "Global chat" })).toHaveAttribute("aria-current", "page");
   await expect(nav.getByRole("button", { name: "Create a room" })).toHaveCount(0);
 
   await nav.getByRole("button", { name: "Browse rooms" }).click();
   const dialog = page.getByRole("dialog", { name: "Public rooms" });
-  await expect(dialog.getByText("general", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Global chat", { exact: true })).toBeVisible();
   await expect(dialog.getByText("Joined")).toBeVisible();
 });
 
@@ -115,7 +115,7 @@ test("history loads older pages when scrolling up", async ({ page }) => {
   await fetch(`${LOCAL_API}/rest/v1/rooms?id=eq.${room.id}`, { method: "DELETE", headers: adminHeaders() });
 });
 
-test("/chat opens #general", async ({ page }) => {
+test("/chat opens Global chat", async ({ page }) => {
   await signInAsGuest(page);
   await page.goto("/chat");
   await expect(page).toHaveURL(new RegExp(`/chat/${GENERAL_ROOM_ID}$`));

@@ -1,6 +1,6 @@
 "use client";
 
-import { Hash, Lock, Menu } from "lucide-react";
+import { Globe, Hash, Lock, Menu } from "lucide-react";
 
 import { useChatNav } from "@/components/chat/chat-shell";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,12 @@ type Props = {
   title: string;
   subtitle?: string | null;
   actions?: React.ReactNode;
+  isGlobal?: boolean;
 };
 
-export function RoomHeader({ type, title, subtitle, actions }: Props) {
+export function RoomHeader({ type, title, subtitle, actions, isGlobal = false }: Props) {
   const { openNav } = useChatNav();
-  const Icon = type === "private" ? Lock : Hash;
+  const Icon = isGlobal ? Globe : type === "private" ? Lock : Hash;
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-2 sm:px-4">

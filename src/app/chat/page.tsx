@@ -6,7 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { GENERAL_ROOM_ID } from "@/lib/chat/data";
 
-// /chat itself has nothing to show: open #general, unless a sign-in or
+// /chat itself has nothing to show: open Global chat, unless a sign-in or
 // account-link error needs explaining first.
 export default function ChatIndex({ searchParams }: PageProps<"/chat">) {
   return (
@@ -27,7 +27,7 @@ async function ChatIndexContent({ searchParams }: Pick<PageProps<"/chat">, "sear
         {error}
       </p>
       <Link href={`/chat/${GENERAL_ROOM_ID}`} className={buttonVariants()}>
-        Go to #general
+        Go to Global chat
       </Link>
     </main>
   );

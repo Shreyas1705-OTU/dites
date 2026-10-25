@@ -11,7 +11,7 @@ export default function RoomNotFound() {
       <p className="font-heading text-3xl">Room not found</p>
       <p className="max-w-sm text-muted-foreground">It doesn&apos;t exist, or you don&apos;t have access to it.</p>
       <Link href={`/chat/${GENERAL_ROOM_ID}`} className={buttonVariants()}>
-        Go to #general
+        Go to Global chat
       </Link>
     </main>
   );

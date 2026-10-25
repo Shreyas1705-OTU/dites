@@ -7,6 +7,19 @@ import type { Database } from "@/lib/supabase/database.types";
 // the caller's RLS: a room you can't read simply returns nothing.
 
 export const GENERAL_ROOM_ID = "00000000-0000-4000-8000-000000000001";
+export const GLOBAL_CHAT_LABEL = "Global chat";
+
+// The room everyone starts in is shown as "Global chat" (its handle stays
+// "general", which keeps the name reserved by the unique index). Other rooms
+// show their channel-style name.
+export function roomTitle(id: string, name: string | null) {
+  return id === GENERAL_ROOM_ID ? GLOBAL_CHAT_LABEL : (name ?? "room");
+}
+
+// How a room reads in sentences: "Global chat" or "#book-club".
+export function roomMention(id: string, name: string | null) {
+  return id === GENERAL_ROOM_ID ? GLOBAL_CHAT_LABEL : `#${name ?? "room"}`;
+}
 export const PAGE_SIZE = 50;
 
 type Client = SupabaseClient<Database>;
@@ -16,7 +29,7 @@ export type RoomType = "public" | "private" | "dm";
 export type RoomSummary = {
   id: string;
   type: RoomType;
-  // "#general" style rooms use name; DMs use the other person's name.
+  // Rooms use roomTitle(); DMs use the other person's name.
   label: string;
   username: string | null;
 };
@@ -124,10 +137,10 @@ export async function fetchMyRooms(supabase: Client, userId: string): Promise<Ro
         const other = others.get(r.id);
         return { id: r.id, type: "dm", label: other?.displayName ?? "Direct message", username: other?.username ?? null };
       }
-      return { id: r.id, type: r.type as RoomType, label: r.name ?? "room", username: null };
+      return { id: r.id, type: r.type as RoomType, label: roomTitle(r.id, r.name), username: null };
     })
     .sort((a, b) => {
-      // #general first, then alphabetical.
+      // Global chat first, then alphabetical.
       if (a.id === GENERAL_ROOM_ID) return -1;
       if (b.id === GENERAL_ROOM_ID) return 1;
       return a.label.localeCompare(b.label);
@@ -141,5 +154,7 @@ export async function fetchPublicRooms(supabase: Client) {
     .eq("type", "public")
     .order("name");
   if (error) throw error;
-  return (data ?? []).map((r) => ({ id: r.id, name: r.name ?? "room", description: r.description }));
+  return (data ?? [])
+    .map((r) => ({ id: r.id, name: roomTitle(r.id, r.name), description: r.description }))
+    .sort((a, b) => (a.id === GENERAL_ROOM_ID ? -1 : b.id === GENERAL_ROOM_ID ? 1 : a.name.localeCompare(b.name)));
 }
