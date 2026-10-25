@@ -80,11 +80,12 @@ select throws_ok($$ select * from public.rooms $$,    '42501', null, 'anon: cann
 -- Reading
 -- ===========================================================================
 select tests.act_as('00000000-0000-0000-0000-00000000000c'); -- carol, outsider
-select results_eq($$ select name from public.rooms order by name $$, array['pub'],
-  'outsider: sees public rooms only, not private rooms or DMs');
+select results_eq($$ select name from public.rooms order by name $$, array['general', 'pub'],
+  'outsider: sees public rooms only (#general and pub), not private rooms or DMs');
 select is_empty($$ select 1 from public.messages $$,
   'outsider: reads no messages (not a member of any room)');
-select is_empty($$ select 1 from public.room_members where room_id <> '10000000-0000-0000-0000-000000000001' $$,
+select is_empty($$ select 1 from public.room_members
+  where room_id not in ('10000000-0000-0000-0000-000000000001', '00000000-0000-4000-8000-000000000001') $$,
   'outsider: cannot see private room or DM membership');
 select isnt_empty($$ select 1 from public.profiles $$, 'registered: can read profiles');
 
