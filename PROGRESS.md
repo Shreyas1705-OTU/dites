@@ -1,50 +1,55 @@
 # Progress
 
 ## Current phase
-Phase 2: Auth and core chat, steps 0 to 3 done (plan: `~/.claude/plans/zany-snacking-glade.md`).
-Phase 1 tagged `v0.1-foundation`. Last session ended 2026-10-25.
+**Phase 2 done, tagged `v0.2-chat` (2026-10-26).** Next: Phase 3, rich chat (plan it first).
 
 ## Done
-- **Phase 0 and 1** (see tag `v0.1-foundation`): scaffold, schema, RLS, `get_or_create_dm`,
+- **Phase 0 and 1** (tag `v0.1-foundation`): scaffold, schema, RLS, `get_or_create_dm`,
   rate limits, keep-alive (`/api/health`, UptimeRobot every 5 min, daily GitHub Actions ping),
   Vercel deploy at https://dites.vercel.app
-- **Phase 2 step 0, design system:** Ink & Paper with a Lapis accent; tokens in `globals.css`,
-  self-hosted fonts, light/dark/system toggle (next-themes)
-- **Step 1, sessions:** `@supabase/ssr` cookie sessions, `src/proxy.ts` refreshes with
-  `getClaims()`, `/auth/callback` (PKCE, `safeNextPath` open-redirect guard), server sign-out,
-  `/auth/reset` clears sessions whose account was deleted
-- **Step 2, sign-in:** guest (Turnstile captcha), GitHub, Google; guest upgrade via
-  `linkIdentity`; profile settings. Verified on production: guest, GitHub and Google sign-in work
-- **Step 3, rooms:** `#general` (fixed id, auto-join), sidebar with rooms and DMs (drawer on
-  mobile), browse/join public rooms, create rooms (registered users), DMs via username search,
-  history with keyset pagination, unique channel-style room names, private-room invites
-  (Members panel, owners add/remove registered users), first-letter people search
-- Production dashboards configured: GitHub + Google OAuth, Turnstile captcha, anonymous
-  sign-ins, manual linking, email off, exact redirect URLs, Realtime public access off
-- Tests (all passing locally): 92 pgTAP, 19 Vitest, 20 Playwright (desktop + mobile)
+- **Phase 2** (tag `v0.2-chat`), all live and checked on production:
+  - Design system: Ink & Paper with a Lapis accent, Garamond + Geist, light/dark/system
+  - Sign-in: guest (Turnstile), GitHub, Google; guest upgrade via `linkIdentity`; profile
+    settings; `@supabase/ssr` cookie sessions verified with `getClaims()`; open-redirect guard;
+    `/auth/reset` for sessions whose account was deleted
+  - Rooms: Global chat (auto-join, can't be left), public and private rooms, unique
+    channel-style names, Members panel, owner add/remove, delete room, leave room with
+    consequences (5-day rejoin wait with a countdown; removed users can't rejoin), DMs via
+    first-letter people search (registered users only)
+  - Messages: composer, optimistic sends with client UUIDs, idempotent retries, rate limits,
+    plain-text rendering, keyset-paginated history
+  - Realtime: trigger-sent Broadcast on private `room:<id>` and `user:<id>` channels,
+    `realtime.messages` policy, catch-up on reconnect, 5-minute idle disconnect
+  - Guest cleanup: hourly `pg_cron` job deletes guests and their data after 24 hours
+  - UI: hideable desktop sidebar (Ctrl/Cmd+B), phone drawer, confirmation popups
+  - Audits: axe (WCAG 2.2 AA) clean in light and dark; Vercel Web Interface Guidelines fixes;
+    Lighthouse mobile on production: performance 94-98, accessibility/best practices/SEO 100,
+    CLS 0.06-0.07
+- Tests (all passing): 136 pgTAP, 25 Vitest (21 unit + 4 realtime attack tests), 71 Playwright
+  (desktop + mobile, incl. 24 accessibility checks)
+- Security Advisor: every finding fixed or explained in `docs/security.md`
 
 ## Next
-1. **Deploy step 3 extras** (not yet live): `npx supabase db push --linked`
-   (`20261025011243_private_room_members.sql`), then `supabase db advisors --linked`, then
-   `git push`. Always database first, then code. Also waiting in the push: the room everyone
-   starts in shown as "Global chat" (globe icon), and the larger, centred "Dites" name on the
-   sign-in page.
-2. **Manual check on production** with GitHub/Google: create a public and a private room, add the
-   Google account through Members, confirm it sees the room after refresh, remove it. Also look
-   at the sidebar, phone drawer, Browse rooms and New message in light and dark.
-3. **Step 4, sending:** composer (Enter / Shift+Enter), client UUIDs, optimistic pending/failed
-   states with retry, friendly 429 message.
-4. **Step 5, realtime:** trigger-sent Broadcast on private channels + `realtime.messages`
-   policies; re-check the `auth_allow_anonymous_sign_ins` advisor finding on that table.
-5. Steps 6 and 7: remaining tests, audits (Pro Max checklist, Vercel guidelines, Lighthouse),
-   tag `v0.2-chat`.
+1. **Plan Phase 3 (rich chat)** in plan mode: images (compression, EXIF stripping, private
+   bucket, signed URLs; deleting a room or guest must also delete its images), typing
+   indicators, presence, unread counts, edit and delete messages, block and report (report
+   goes to the admin queue, see Decisions).
+2. Phase 4 polish: animations (agreed plan: message arrival, hover, typing cursor; landing
+   headline typing in, live #general preview), demo rooms and bot, landing page; also the LCP
+   item below.
 
 ## Open issues
+- Lighthouse mobile LCP is 2.1-2.9 s (simulated slow 4G; the real render is ~130 ms). Launch
+  checklist wants under 2 s on a phone: look at font payload (4 files, ~142 KB) and JS in Phase 4.
+- Ctrl/Cmd+K quick switcher not built (Phase 13, batch B).
+- When checking test output in scripts, match the summary line (`^  N passed`), not the word
+  "failed": a test is named "a failed send shows Retry…".
 - Local dev: port 3000 is taken by Open WebUI, so `npm run dev` lands on another port.
   Playwright runs its own build on :3100. Local OAuth would need :3000 (not needed; OAuth is
   tested on production).
-- Run e2e with the local secret key for the admin-backed tests:
+- Run e2e and the realtime attack tests with the local secret key (admin-backed fixtures):
   `SUPABASE_SECRET_KEY=$(npx supabase status -o json | jq -r .SECRET_KEY) npx playwright test`
+  (same variable for `npm test`)
 - Owner actions in the Members panel and room creation have no automated e2e (needs a real
   OAuth user); database rules are covered by pgTAP.
 - Cold `/api/health` latency 300-900 ms; if warm stays >200 ms, align the Vercel function
