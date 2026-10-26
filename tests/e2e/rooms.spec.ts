@@ -206,3 +206,41 @@ test("leaving a public room asks first, then blocks rejoining for 5 days", async
 
   await fetch(`${LOCAL_API}/rest/v1/rooms?id=eq.${room.id}`, { method: "DELETE", headers: adminHeaders() });
 });
+
+test("the desktop sidebar can be hidden, is remembered, and Ctrl+B toggles it", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 1280) < 768, "desktop sidebar only");
+  await signInAsGuest(page);
+  const sidebar = page.getByRole("navigation", { name: "Rooms and direct messages" });
+  await expect(sidebar).toBeVisible();
+
+  await page.getByRole("button", { name: "Hide sidebar" }).click();
+  await expect(sidebar).toBeHidden();
+  await expect(page.getByRole("button", { name: "Show sidebar" })).toHaveAttribute("aria-expanded", "false");
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Show sidebar" })).toBeVisible();
+  await expect(sidebar).toBeHidden();
+
+  await page.keyboard.press("ControlOrMeta+b");
+  await expect(sidebar).toBeVisible();
+  await expect(page.getByRole("button", { name: "Hide sidebar" })).toBeVisible();
+});
+
+test("on a phone, opening a DM from the dialog leaves no drawer or dialog in the way", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const alice = await context.newPage();
+  const bob = await (await browser.newContext()).newPage();
+  await signInAsGuest(alice);
+  await signInAsGuest(bob);
+  const bobName = await currentUsername(bob);
+
+  const nav = await openNav(alice);
+  await nav.getByRole("button", { name: "New direct message" }).click();
+  const dialog = alice.getByRole("dialog", { name: "New message" });
+  await dialog.getByLabel("Name or username").fill(bobName);
+  await dialog.getByRole("button", { name: new RegExp(bobName) }).click();
+
+  await expect(alice.getByRole("heading", { level: 1, name: bobName })).toBeVisible();
+  await expect(alice.getByRole("dialog")).toHaveCount(0);
+  await expect(alice.getByRole("textbox", { name: `Message ${bobName}` })).toBeVisible();
+});
