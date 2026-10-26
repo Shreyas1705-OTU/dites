@@ -55,9 +55,10 @@ reset role;
 select results_eq(
   $$ select user_id from public.room_members
      where room_id = '00000000-0000-4000-8000-000000000001'
-       and user_id in ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-00000000000e') $$,
-  $$ values ('00000000-0000-0000-0000-00000000000e'::uuid) $$,
-  'a member can leave #general, and only their own row goes');
+       and user_id in ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-00000000000e')
+     order by user_id $$,
+  $$ values ('00000000-0000-0000-0000-00000000000a'::uuid), ('00000000-0000-0000-0000-00000000000e'::uuid) $$,
+  'nobody can leave Global chat: both memberships remain');
 
 select * from finish();
 rollback;
