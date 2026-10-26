@@ -59,6 +59,9 @@ test("a failed send shows Retry, and Retry delivers it", async ({ page }) => {
 
 test("retrying after a lost response does not create a duplicate", async ({ page }) => {
   test.skip(!SECRET_KEY, "SUPABASE_SECRET_KEY not set");
+  // No realtime here, so the realtime echo can't confirm the message and the
+  // Retry path is what's being tested.
+  await page.routeWebSocket(/\/realtime\/v1\//, (ws) => ws.close());
   await signInAsGuest(page);
 
   // The insert reaches the database, but the browser is told it failed.
@@ -77,6 +80,28 @@ test("retrying after a lost response does not create a duplicate", async ({ page
   await page.getByRole("button", { name: "Retry" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Not sent." })).toHaveCount(0);
 
+  const rows = await (
+    await fetch(`${LOCAL_API}/rest/v1/messages?select=id&body=eq.${encodeURIComponent(text)}`, {
+      headers: adminHeaders(),
+    })
+  ).json();
+  expect(rows).toHaveLength(1);
+});
+
+test("a sent message never flips to 'Not sent' when its response is lost but the echo arrives", async ({ page }) => {
+  test.skip(!SECRET_KEY, "SUPABASE_SECRET_KEY not set");
+  await signInAsGuest(page);
+  await page.route("**/rest/v1/messages*", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    await route.fetch();
+    await route.fulfill({ status: 500, contentType: "application/json", body: "{}" });
+  });
+
+  const text = unique("echo wins");
+  await send(page, text);
+  // Whatever arrives first, the end state is one delivered message.
+  await expect(log(page).getByText(text)).toHaveCount(1);
+  await expect(page.getByRole("alert").filter({ hasText: "Not sent." })).toHaveCount(0, { timeout: 10_000 });
   const rows = await (
     await fetch(`${LOCAL_API}/rest/v1/messages?select=id&body=eq.${encodeURIComponent(text)}`, {
       headers: adminHeaders(),

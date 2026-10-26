@@ -136,7 +136,16 @@ export function useRoomMessages({ roomId, me, initialMessages, initialHasMore }:
     async (message: UiMessage, isRetry: boolean) => {
       upsert({ ...message, status: "pending", failReason: undefined });
       const result = await sendMessage(supabase, { id: message.id, roomId, body: message.body ?? "" }, isRetry);
-      upsert(result.ok ? result.message : { ...message, status: "failed", failReason: result.reason });
+      if (result.ok) {
+        upsert(result.message);
+        return;
+      }
+      // Only mark it failed if it's still unconfirmed: the realtime echo can
+      // arrive before a response that then gets lost, and a message everyone
+      // can already see must not flip to "Not sent".
+      setMessages((current) =>
+        current.map((m) => (m.id === message.id && m.status ? { ...m, status: "failed", failReason: result.reason } : m)),
+      );
     },
     [roomId, supabase, upsert],
   );
