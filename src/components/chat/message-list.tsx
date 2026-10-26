@@ -15,6 +15,7 @@ type Props = {
   onRetry: (id: string) => void;
   emptyText: string;
   scrollRef: RefObject<HTMLDivElement | null>;
+  live?: boolean;
 };
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
@@ -71,6 +72,7 @@ export function MessageList({
   onRetry,
   emptyText,
   scrollRef,
+  live = false,
 }: Props) {
   const sentinel = useRef<HTMLDivElement>(null);
 
@@ -99,6 +101,8 @@ export function MessageList({
     // and older pages added at the top don't push what you're reading.
     <div
       ref={scrollRef}
+      // Realtime connection state, for tests now and the X-ray panel later.
+      data-realtime={live ? "live" : "connecting"}
       role="log"
       aria-label="Messages"
       aria-live="polite"

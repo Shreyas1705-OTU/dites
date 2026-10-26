@@ -97,6 +97,8 @@ test("a sent message never flips to 'Not sent' when its response is lost but the
     await route.fulfill({ status: 500, contentType: "application/json", body: "{}" });
   });
 
+  // The echo can only win if the room's realtime channel is already joined.
+  await expect(log(page)).toHaveAttribute("data-realtime", "live");
   const text = unique("echo wins");
   await send(page, text);
   // Whatever arrives first, the end state is one delivered message.

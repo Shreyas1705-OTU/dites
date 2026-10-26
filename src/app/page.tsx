@@ -17,7 +17,8 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-10 px-4 pt-6 pb-16 sm:px-6 md:grid-cols-[1.1fr_1fr] md:gap-16">
+      {/* Top-aligned on phones so a change in the card's height can't move the headline. */}
+      <div className="mx-auto grid w-full max-w-5xl flex-1 content-start items-start gap-10 px-4 pt-6 pb-16 sm:px-6 md:grid-cols-[1.1fr_1fr] md:content-center md:items-center md:gap-16">
         <section className="flex flex-col gap-5">
           <p className="font-mono text-xs tracking-[0.08em] text-muted-foreground uppercase">
             dites · /dit/ · French, &ldquo;say it&rdquo;

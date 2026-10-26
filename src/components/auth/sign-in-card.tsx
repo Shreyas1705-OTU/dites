@@ -104,30 +104,17 @@ export function SignInCard() {
       {error && <ErrorBanner>{error}</ErrorBanner>}
 
       <div className="flex flex-col gap-3">
-        {/* The captcha sits inside the guest group: once it loads it's usually
-            invisible, and outside this group it would add a gap and push the
-            buttons below down. */}
-        <div className="flex flex-col">
-          <Button size="lg" onClick={signInAsGuest} disabled={busy || !token} aria-busy={pending === "guest"}>
+        <Button size="lg" onClick={signInAsGuest} disabled={busy || !token} aria-busy={pending === "guest"}>
+          {/* Fixed slot: swapping spinner and icon never changes the layout. */}
+          <span className="inline-flex size-4 shrink-0" aria-hidden="true">
             {pending === "guest" || (!token && !captchaBroken) ? (
-              <Loader2 className="animate-spin" aria-hidden="true" />
+              <Loader2 className="animate-spin" />
             ) : (
-              <UserRound aria-hidden="true" />
+              <UserRound />
             )}
-            {pending === "guest" ? "Starting your session…" : guestLabel}
-          </Button>
-          <Turnstile
-            onToken={setToken}
-            onError={() => setCaptchaBroken(true)}
-            resetKey={resetKey}
-          />
-          {captchaBroken && (
-            <p className="pt-3 text-sm text-muted-foreground">
-              The captcha didn&apos;t load. A content blocker may be stopping it; you can still continue with GitHub
-              or Google.
-            </p>
-          )}
-        </div>
+          </span>
+          {pending === "guest" ? "Starting your session…" : guestLabel}
+        </Button>
 
         <div className="flex items-center gap-3 py-1 text-xs tracking-[0.06em] text-muted-foreground uppercase">
           <span className="h-px flex-1 bg-border" />
@@ -148,6 +135,18 @@ export function SignInCard() {
       <p className="text-xs leading-relaxed text-muted-foreground">
         Guests can link GitHub or Google later to keep their account. Dites never asks for or stores a password.
       </p>
+
+      {/* The captcha is the last thing in the card: for most people it stays
+          invisible, and when Cloudflare does show its checkbox nothing sits
+          below it to be pushed down. */}
+      <Turnstile onToken={setToken} onError={() => setCaptchaBroken(true)} resetKey={resetKey} />
+      {captchaBroken && (
+        <p className="text-sm text-muted-foreground">
+          The captcha didn&apos;t load. A content blocker may be stopping it; you can still continue with GitHub or
+          Google.
+        </p>
+      )}
+
     </div>
   );
 }

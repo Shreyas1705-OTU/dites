@@ -38,6 +38,8 @@ export function useRoomMessages({ roomId, me, initialMessages, initialHasMore }:
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  // Whether this room's realtime channel is joined right now.
+  const [live, setLive] = useState(false);
   // One browser client for the hook's lifetime (createClient is a singleton anyway).
   const [supabase] = useState(createClient);
 
@@ -103,6 +105,7 @@ export function useRoomMessages({ roomId, me, initialMessages, initialHasMore }:
           upsert(toChatMessage(payload as MessageEventPayload)),
         )
         .subscribe((status) => {
+          setLive(status === "SUBSCRIBED");
           // On every (re)join, fetch anything sent while we weren't listening.
           if (status === "SUBSCRIBED") void catchUp();
         });
@@ -111,6 +114,7 @@ export function useRoomMessages({ roomId, me, initialMessages, initialHasMore }:
     const disconnect = () => {
       if (channel) void supabase.removeChannel(channel);
       channel = null;
+      setLive(false);
     };
 
     const onVisibility = () => {
@@ -196,5 +200,5 @@ export function useRoomMessages({ roomId, me, initialMessages, initialHasMore }:
     }
   }, [messages, loadingOlder, hasMore, roomId, supabase]);
 
-  return { messages, hasMore, loadingOlder, loadError, send, retry, loadOlder, upsert };
+  return { messages, hasMore, loadingOlder, loadError, live, send, retry, loadOlder, upsert };
 }

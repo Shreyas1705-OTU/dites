@@ -10,6 +10,11 @@ test("a message appears for others in real time, without a reload", async ({ bro
   await signInAsGuest(alice);
   await signInAsGuest(bob);
 
+  // Both tabs' room channels joined, so this tests delivery, not connect time.
+  for (const page of [alice, bob]) {
+    await expect(page.getByRole("log", { name: "Messages" })).toHaveAttribute("data-realtime", "live", { timeout: 15_000 });
+  }
+
   const text = unique("live hello");
   const box = alice.getByRole("textbox", { name: /^Message / });
   await box.fill(text);
@@ -44,6 +49,8 @@ test("a new DM shows up in the other person's sidebar and delivers live", async 
 
   const text = unique("just between us");
   const box = alice.getByRole("textbox", { name: `Message ${bobName}` });
+  // A brand-new DM has no messages yet, so there's no log to check; the
+  // catch-up on join covers a message sent while Bob's channel connects.
   await box.fill(text);
   await box.press("Enter");
   await expect(bob.getByRole("log", { name: "Messages" }).getByText(text)).toBeVisible({ timeout: 10_000 });

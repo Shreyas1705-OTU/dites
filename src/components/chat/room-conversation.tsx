@@ -32,6 +32,7 @@ export function RoomConversation({ roomId, me, initialMessages, initialHasMore, 
         onRetry={room.retry}
         emptyText={emptyText}
         scrollRef={scrollRef}
+        live={room.live}
       />
       <Composer
         placeholder={placeholder}
