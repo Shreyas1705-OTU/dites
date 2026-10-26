@@ -43,7 +43,7 @@ async function Room({ params }: Pick<PageProps<"/chat/[roomId]">, "params">) {
     return (
       <>
         <RoomHeader type={type} title={roomTitle(room.id, room.name)} subtitle={room.description} isGlobal={room.id === GENERAL_ROOM_ID} />
-        <JoinRoom roomId={room.id} name={room.name ?? "room"} description={room.description} />
+        <JoinRoom roomId={room.id} title={roomMention(room.id, room.name)} description={room.description} />
       </>
     );
   }
@@ -98,6 +98,9 @@ async function Room({ params }: Pick<PageProps<"/chat/[roomId]">, "params">) {
               currentUserId={user.id}
               members={members}
               total={membersResult?.count ?? members.length}
+              handle={room.name ?? ""}
+              canLeave={membership.role === "member"}
+              canDelete={membership.role === "owner"}
             />
           )
         }

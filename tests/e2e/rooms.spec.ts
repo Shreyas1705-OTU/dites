@@ -162,3 +162,20 @@ test("people search lists registered users from the first letter, not guests", a
 
   await fetch(`${LOCAL_API}/auth/v1/admin/users/${registered.id}`, { method: "DELETE", headers: adminHeaders() });
 });
+
+test("a member leaves a room and can rejoin it", async ({ page }) => {
+  await signInAsGuest(page);
+  await page.getByRole("button", { name: /^Members/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Members of Global chat" });
+  await dialog.getByRole("button", { name: "Leave room" }).click();
+  await dialog.getByRole("button", { name: "Leave", exact: true }).click();
+
+  // No longer a member: Global chat offers to join instead of showing messages.
+  await expect(page.getByRole("button", { name: "Join Global chat" })).toBeVisible();
+  const nav = await openNav(page);
+  await expect(nav.getByRole("link", { name: "Global chat" })).toHaveCount(0);
+  if ((page.viewportSize()?.width ?? 1280) < 768) await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Join Global chat" }).click();
+  await expect(page.getByRole("textbox", { name: "Message Global chat" })).toBeVisible();
+});

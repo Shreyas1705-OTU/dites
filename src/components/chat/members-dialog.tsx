@@ -1,9 +1,9 @@
 "use client";
 
-import { Crown, Loader2, UserPlus, Users, X } from "lucide-react";
+import { Crown, DoorOpen, Loader2, Trash2, UserPlus, Users, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
-import { addMember, removeMember, searchUsers, type UserMatch } from "@/app/chat/actions";
+import { addMember, deleteRoom, leaveRoom, removeMember, searchUsers, type UserMatch } from "@/app/chat/actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,10 @@ type Props = {
   currentUserId: string;
   members: RoomMember[];
   total: number;
+  // The room's handle ("book-club"), typed to confirm deletion.
+  handle: string;
+  canLeave: boolean;
+  canDelete: boolean;
 };
 
 function Avatar({ name }: { name: string }) {
@@ -36,7 +40,18 @@ function Avatar({ name }: { name: string }) {
   );
 }
 
-export function MembersDialog({ roomId, title, isPrivate, isOwner, currentUserId, members, total }: Props) {
+export function MembersDialog({
+  roomId,
+  title,
+  isPrivate,
+  isOwner,
+  currentUserId,
+  members,
+  total,
+  handle,
+  canLeave,
+  canDelete,
+}: Props) {
   const canManage = isPrivate && isOwner;
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<UserMatch[]>([]);
@@ -177,7 +192,129 @@ export function MembersDialog({ roomId, title, isPrivate, isOwner, currentUserId
             <li className="px-2 py-2 text-sm text-muted-foreground">and {total - members.length} more</li>
           )}
         </ul>
+        {(canLeave || canDelete) && (
+          <RoomDangerZone roomId={roomId} title={title} handle={handle} canLeave={canLeave} canDelete={canDelete} />
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Leaving and deleting live at the bottom of the panel, behind a confirmation.
+function RoomDangerZone({
+  roomId,
+  title,
+  handle,
+  canLeave,
+  canDelete,
+}: {
+  roomId: string;
+  title: string;
+  handle: string;
+  canLeave: boolean;
+  canDelete: boolean;
+}) {
+  const [confirming, setConfirming] = useState<"leave" | "delete" | null>(null);
+  const [typed, setTyped] = useState("");
+  const [error, setError] = useState<string>();
+  const [pending, startTransition] = useTransition();
+
+  function run(action: () => Promise<{ error: string } | undefined>) {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await action();
+      if (result?.error) setError(result.error);
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-3 border-t pt-4">
+      {confirming === null && (
+        <div className="flex flex-wrap gap-2">
+          {canLeave && (
+            <Button variant="outline" size="sm" onClick={() => setConfirming("leave")}>
+              <DoorOpen aria-hidden="true" />
+              Leave room
+            </Button>
+          )}
+          {canDelete && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setConfirming("delete")}
+            >
+              <Trash2 aria-hidden="true" />
+              Delete room
+            </Button>
+          )}
+        </div>
+      )}
+
+      {confirming === "leave" && (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm">
+            Leave {title}? {canLeave && "You can rejoin a public room any time; a private room needs its owner to add you back."}
+          </p>
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setConfirming(null)} disabled={pending}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={() => run(() => leaveRoom(roomId))} disabled={pending}>
+              {pending && <Loader2 className="animate-spin" aria-hidden="true" />}
+              Leave
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {confirming === "delete" && (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm">
+            This deletes <span className="font-semibold">{title}</span> and all of its messages for everyone. It
+            can&apos;t be undone.
+          </p>
+          <label htmlFor={`confirm-${roomId}`} className="text-sm text-muted-foreground">
+            Type <span className="font-mono font-medium text-foreground">{handle}</span> to confirm
+          </label>
+          <Input
+            id={`confirm-${roomId}`}
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setConfirming(null);
+                setTyped("");
+              }}
+              disabled={pending}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => run(() => deleteRoom(roomId, typed))}
+              disabled={pending || typed.trim().toLowerCase().replace(/^#/, "") !== handle}
+            >
+              {pending && <Loader2 className="animate-spin" aria-hidden="true" />}
+              Delete forever
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

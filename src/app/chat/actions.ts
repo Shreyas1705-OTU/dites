@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { GENERAL_ROOM_ID } from "@/lib/chat/data";
 import { normalizeRoomName } from "@/lib/chat/room-name";
 import { createClient } from "@/lib/supabase/server";
 
@@ -151,4 +152,42 @@ export async function startDm(otherUserId: string): Promise<ActionResult> {
 
   revalidatePath("/chat", "layout");
   redirect(`/chat/${roomId}`);
+}
+
+export async function leaveRoom(roomId: string): Promise<ActionResult> {
+  if (!UUID.test(roomId)) return { error: "Couldn't leave that room." };
+  const { supabase, userId } = await requireUserId();
+  if (!userId) return { error: "Your session ended. Sign in again." };
+
+  // RLS allows members to remove only themselves, never from a DM, and never
+  // the owner (that would leave the room without one).
+  const { data, error } = await supabase
+    .from("room_members")
+    .delete()
+    .eq("room_id", roomId)
+    .eq("user_id", userId)
+    .select("user_id");
+  if (error || !data?.length) return { error: "You can't leave this room." };
+
+  revalidatePath("/chat", "layout");
+  redirect(`/chat/${GENERAL_ROOM_ID}`);
+}
+
+export async function deleteRoom(roomId: string, confirmName: string): Promise<ActionResult> {
+  if (!UUID.test(roomId)) return { error: "Couldn't delete that room." };
+  const { supabase, userId } = await requireUserId();
+  if (!userId) return { error: "Your session ended. Sign in again." };
+
+  const { data: room } = await supabase.from("rooms").select("name").eq("id", roomId).maybeSingle();
+  if (!room || normalizeRoomName(confirmName) !== room.name) {
+    return { error: "Type the room's name exactly to confirm." };
+  }
+
+  // Only the owner passes RLS; messages and memberships cascade, and every
+  // member is told live through their user channel.
+  const { data, error } = await supabase.from("rooms").delete().eq("id", roomId).select("id");
+  if (error || !data?.length) return { error: "Only the room's owner can delete it." };
+
+  revalidatePath("/chat", "layout");
+  redirect(`/chat/${GENERAL_ROOM_ID}`);
 }
