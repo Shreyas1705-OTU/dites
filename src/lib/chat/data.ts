@@ -161,6 +161,30 @@ export async function sendMessage(
   return { ok: false, reason: sendErrorReason(error ?? {}) };
 }
 
+// Everything after the newest message a client has, oldest first. Used to
+// catch up whenever the realtime channel (re)connects, so nothing sent while
+// the tab was offline, asleep or still connecting is missed.
+export async function fetchMessagesAfter(
+  supabase: Client,
+  roomId: string,
+  after: { createdAt: string; id: string },
+): Promise<ChatMessage[]> {
+  const { data, error } = await supabase
+    .from("messages")
+    .select(MESSAGE_COLUMNS)
+    .eq("room_id", roomId)
+    .or(`created_at.gt.${after.createdAt},and(created_at.eq.${after.createdAt},id.gt.${after.id})`)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(200)
+    .overrideTypes<MessageRow[], { merge: false }>();
+  if (error) throw error;
+  return (data ?? []).map(toChatMessage);
+}
+
+// Shape of the message events sent by private.broadcast_message().
+export type MessageEventPayload = MessageRow;
+
 export async function fetchMyRooms(supabase: Client, userId: string): Promise<RoomSummary[]> {
   const { data: memberships, error } = await supabase
     .from("room_members")

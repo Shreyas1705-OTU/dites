@@ -1,8 +1,15 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { fetchMessages, sendMessage, type ChatMessage } from "@/lib/chat/data";
+import {
+  fetchMessages,
+  fetchMessagesAfter,
+  sendMessage,
+  toChatMessage,
+  type ChatMessage,
+  type MessageEventPayload,
+} from "@/lib/chat/data";
 import { createClient } from "@/lib/supabase/client";
 
 export type UiMessage = ChatMessage & {
@@ -18,6 +25,10 @@ type Options = {
   initialHasMore: boolean;
 };
 
+// Disconnect after this long hidden, to stay inside the free tier's
+// concurrent-connection budget; reconnect and catch up when visible again.
+const HIDDEN_DISCONNECT_MS = 5 * 60 * 1000;
+
 // One owner for a room's messages. Everything (history pages, sends,
 // retries, and realtime events later) goes through `upsert`, which replaces a
 // message in place by id. A confirmed send therefore swaps its optimistic
@@ -27,17 +38,99 @@ export function useRoomMessages({ roomId, me, initialMessages, initialHasMore }:
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const supabase = useRef(createClient()).current;
+  // One browser client for the hook's lifetime (createClient is a singleton anyway).
+  const [supabase] = useState(createClient);
 
   const upsert = useCallback((message: UiMessage) => {
     setMessages((current) => {
       const index = current.findIndex((m) => m.id === message.id);
-      if (index === -1) return [message, ...current];
-      const next = current.slice();
-      next[index] = message;
-      return next;
+      if (index !== -1) {
+        const next = current.slice();
+        next[index] = message;
+        return next;
+      }
+      // New message: place it by time (the list is newest first). Almost
+      // always that's the front; a late catch-up may slot in further down.
+      // Compare as dates: the server and the browser format timestamps differently.
+      const time = Date.parse(message.createdAt);
+      const at = current.findIndex((m) => Date.parse(m.createdAt) <= time);
+      if (at === -1) return [...current, message];
+      return [...current.slice(0, at), message, ...current.slice(at)];
     });
   }, []);
+
+  // Read the latest list inside callbacks without re-subscribing.
+  const latest = useRef(messages);
+  useEffect(() => {
+    latest.current = messages;
+  });
+
+  // Realtime: one private channel per open room. Joining it is authorized
+  // by the realtime.messages policy (members only). Events are sent by a
+  // database trigger, so a message appears here the moment it is saved,
+  // from any client.
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let hiddenTimer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+    let connecting = false;
+
+    const catchUp = async () => {
+      const newest = latest.current.find((m) => !m.status);
+      try {
+        const missed = newest
+          ? await fetchMessagesAfter(supabase, roomId, { createdAt: newest.createdAt, id: newest.id })
+          : (await fetchMessages(supabase, roomId)).messages;
+        if (!cancelled) missed.forEach(upsert);
+      } catch {
+        // The next reconnect tries again.
+      }
+    };
+
+    const connect = async () => {
+      if (channel || connecting || cancelled) return;
+      connecting = true;
+      // Hand the current session token to Realtime for the private join.
+      await supabase.realtime.setAuth();
+      connecting = false;
+      if (cancelled || channel) return;
+      channel = supabase
+        .channel(`room:${roomId}`, { config: { private: true } })
+        .on("broadcast", { event: "message.insert" }, ({ payload }) =>
+          upsert(toChatMessage(payload as MessageEventPayload)),
+        )
+        .on("broadcast", { event: "message.update" }, ({ payload }) =>
+          upsert(toChatMessage(payload as MessageEventPayload)),
+        )
+        .subscribe((status) => {
+          // On every (re)join, fetch anything sent while we weren't listening.
+          if (status === "SUBSCRIBED") void catchUp();
+        });
+    };
+
+    const disconnect = () => {
+      if (channel) void supabase.removeChannel(channel);
+      channel = null;
+    };
+
+    const onVisibility = () => {
+      clearTimeout(hiddenTimer);
+      if (document.visibilityState === "hidden") {
+        hiddenTimer = setTimeout(disconnect, HIDDEN_DISCONNECT_MS);
+      } else {
+        void connect();
+      }
+    };
+
+    void connect();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      cancelled = true;
+      clearTimeout(hiddenTimer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      disconnect();
+    };
+  }, [roomId, supabase, upsert]);
 
   const deliver = useCallback(
     async (message: UiMessage, isRetry: boolean) => {
