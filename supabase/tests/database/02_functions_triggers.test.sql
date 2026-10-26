@@ -144,8 +144,9 @@ select lives_ok($$ insert into public.messages (room_id, body)
 select throws_ok($$ insert into public.messages (room_id, body) values ('10000000-0000-0000-0000-000000000001', 'one too many') $$,
   'PT429', null, 'messages: 21st in a minute is rate limited');
 
--- Rooms: 5 per hour. Alice created 1 above.
-select lives_ok($$ insert into public.rooms (type, name) select 'public', 'r' || g from generate_series(1, 4) g $$,
+-- Rooms: 5 per hour, counting rooms Alice creates herself (the fixture room
+-- above was inserted as postgres, so it isn't counted).
+select lives_ok($$ insert into public.rooms (type, name) select 'public', 'r' || g from generate_series(1, 5) g $$,
   'rooms: 5 in an hour allowed');
 select throws_ok($$ insert into public.rooms (type, name) values ('public', 'r6') $$,
   'PT429', null, 'rooms: 6th in an hour is rate limited');
