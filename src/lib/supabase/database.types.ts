@@ -97,6 +97,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"room_departures": {
+                  Row: {
+                    "departed_at": string,"kind": string,"room_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "departed_at"?: string,"kind": string,"room_id": string,"user_id": string
+                  }
+                  Update: {
+                    "departed_at"?: string,"kind"?: string,"room_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "room_departures_room_id_fkey"
+      columns: ["room_id"]
+isOneToOne: false
+      referencedRelation: "rooms"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "room_departures_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"room_members": {
                   Row: {
                     "joined_at": string,"last_read_at": string,"role": string,"room_id": string,"user_id": string

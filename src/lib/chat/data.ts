@@ -230,6 +230,27 @@ export async function fetchMyRooms(supabase: Client, userId: string): Promise<Ro
     });
 }
 
+export const REJOIN_WAIT_DAYS = 5;
+
+// Why you can't (re)join a public room yourself: the owner removed you, or
+// you left less than 5 days ago. Mirrors private.can_self_join(), which is
+// what the database actually enforces.
+export type Departure = { kind: "removed" } | { kind: "left"; rejoinAt: string };
+
+export async function fetchMyDepartures(supabase: Client, userId: string): Promise<Record<string, Departure>> {
+  const { data } = await supabase.from("room_departures").select("room_id, kind, departed_at").eq("user_id", userId);
+  const result: Record<string, Departure> = {};
+  for (const d of data ?? []) {
+    if (d.kind === "removed") {
+      result[d.room_id] = { kind: "removed" };
+    } else {
+      const rejoinAt = new Date(Date.parse(d.departed_at) + REJOIN_WAIT_DAYS * 24 * 60 * 60 * 1000);
+      if (rejoinAt.getTime() > Date.now()) result[d.room_id] = { kind: "left", rejoinAt: rejoinAt.toISOString() };
+    }
+  }
+  return result;
+}
+
 export async function fetchPublicRooms(supabase: Client) {
   const { data, error } = await supabase
     .from("rooms")

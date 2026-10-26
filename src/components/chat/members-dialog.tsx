@@ -7,6 +7,7 @@ import { addMember, deleteRoom, leaveRoom, removeMember, searchUsers, type UserM
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export type RoomMember = {
   id: string;
@@ -52,7 +53,9 @@ export function MembersDialog({
   canLeave,
   canDelete,
 }: Props) {
+  // Owners add people only to private rooms; they can remove from any room they own.
   const canManage = isPrivate && isOwner;
+  const canRemove = isOwner;
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<UserMatch[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -99,9 +102,11 @@ export function MembersDialog({
           <DialogDescription>
             {canManage
               ? "Add people with a GitHub or Google account. Only you, the owner, can add or remove members."
-              : isPrivate
-                ? "Only the owner can add or remove members."
-                : "Anyone signed in can join this room."}
+              : isOwner
+                ? "Anyone signed in can join. You can remove people; they won't be able to rejoin."
+                : isPrivate
+                  ? "Only the owner can add or remove members."
+                  : "Anyone signed in can join this room."}
           </DialogDescription>
         </DialogHeader>
 
@@ -174,17 +179,21 @@ export function MembersDialog({
                   Owner
                 </span>
               )}
-              {canManage && member.role !== "owner" && (
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  disabled={pendingId !== null}
-                  onClick={() => run(member.id, () => removeMember(roomId, member.id))}
-                  aria-label={`Remove ${member.displayName}`}
-                  title="Remove from room"
-                >
-                  {pendingId === member.id ? <Loader2 className="animate-spin" aria-hidden="true" /> : <X aria-hidden="true" />}
-                </Button>
+              {canRemove && member.role !== "owner" && (
+                <ConfirmDialog
+                  trigger={
+                    <Button size="icon-sm" variant="ghost" aria-label={`Remove ${member.displayName}`} title="Remove from room">
+                      <X aria-hidden="true" />
+                    </Button>
+                  }
+                  title={`Remove ${member.displayName}?`}
+                  description={`They'll be removed from ${title} right away and won't be able to rejoin it.${
+                    isPrivate ? " You can add them back later." : ""
+                  }`}
+                  confirmLabel="Remove"
+                  destructive
+                  onConfirm={() => removeMember(roomId, member.id)}
+                />
               )}
             </li>
           ))}
@@ -193,127 +202,94 @@ export function MembersDialog({
           )}
         </ul>
         {(canLeave || canDelete) && (
-          <RoomDangerZone roomId={roomId} title={title} handle={handle} canLeave={canLeave} canDelete={canDelete} />
+          <RoomDangerZone
+            roomId={roomId}
+            title={title}
+            handle={handle}
+            isPrivate={isPrivate}
+            canLeave={canLeave}
+            canDelete={canDelete}
+          />
         )}
       </DialogContent>
     </Dialog>
   );
 }
 
-// Leaving and deleting live at the bottom of the panel, behind a confirmation.
+// Leaving and deleting sit at the bottom of the panel; both confirm in a popup
+// that says what will happen.
 function RoomDangerZone({
   roomId,
   title,
   handle,
+  isPrivate,
   canLeave,
   canDelete,
 }: {
   roomId: string;
   title: string;
   handle: string;
+  isPrivate: boolean;
   canLeave: boolean;
   canDelete: boolean;
 }) {
-  const [confirming, setConfirming] = useState<"leave" | "delete" | null>(null);
   const [typed, setTyped] = useState("");
-  const [error, setError] = useState<string>();
-  const [pending, startTransition] = useTransition();
-
-  function run(action: () => Promise<{ error: string } | undefined>) {
-    setError(undefined);
-    startTransition(async () => {
-      const result = await action();
-      if (result?.error) setError(result.error);
-    });
-  }
+  const matches = typed.trim().toLowerCase().replace(/^#/, "") === handle;
 
   return (
-    <div className="flex flex-col gap-3 border-t pt-4">
-      {confirming === null && (
-        <div className="flex flex-wrap gap-2">
-          {canLeave && (
-            <Button variant="outline" size="sm" onClick={() => setConfirming("leave")}>
+    <div className="flex flex-wrap gap-2 border-t pt-4">
+      {canLeave && (
+        <ConfirmDialog
+          trigger={
+            <Button variant="outline" size="sm">
               <DoorOpen aria-hidden="true" />
               Leave room
             </Button>
-          )}
-          {canDelete && (
+          }
+          title={`Leave ${title}?`}
+          description={
+            isPrivate
+              ? "You'll stop seeing its messages. Only the owner can add you back."
+              : "You'll stop seeing its messages, and you won't be able to rejoin for 5 days."
+          }
+          confirmLabel="Leave room"
+          onConfirm={() => leaveRoom(roomId)}
+        />
+      )}
+      {canDelete && (
+        <ConfirmDialog
+          trigger={
             <Button
               variant="outline"
               size="sm"
               className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={() => setConfirming("delete")}
             >
               <Trash2 aria-hidden="true" />
               Delete room
             </Button>
-          )}
-        </div>
-      )}
-
-      {confirming === "leave" && (
-        <div className="flex flex-col gap-2">
-          <p className="text-sm">
-            Leave {title}? {canLeave && "You can rejoin a public room any time; a private room needs its owner to add you back."}
-          </p>
-          <div className="flex gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setConfirming(null)} disabled={pending}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={() => run(() => leaveRoom(roomId))} disabled={pending}>
-              {pending && <Loader2 className="animate-spin" aria-hidden="true" />}
-              Leave
-            </Button>
+          }
+          title={`Delete ${title}?`}
+          description="This deletes the room and all of its messages for everyone. It can't be undone."
+          confirmLabel="Delete forever"
+          destructive
+          confirmDisabled={!matches}
+          onOpenChange={(open) => !open && setTyped("")}
+          onConfirm={() => deleteRoom(roomId, typed)}
+        >
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={`confirm-${roomId}`} className="text-sm text-muted-foreground">
+              Type <span className="font-mono font-medium text-foreground">{handle}</span> to confirm
+            </label>
+            <Input
+              id={`confirm-${roomId}`}
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+            />
           </div>
-        </div>
-      )}
-
-      {confirming === "delete" && (
-        <div className="flex flex-col gap-2">
-          <p className="text-sm">
-            This deletes <span className="font-semibold">{title}</span> and all of its messages for everyone. It
-            can&apos;t be undone.
-          </p>
-          <label htmlFor={`confirm-${roomId}`} className="text-sm text-muted-foreground">
-            Type <span className="font-mono font-medium text-foreground">{handle}</span> to confirm
-          </label>
-          <Input
-            id={`confirm-${roomId}`}
-            value={typed}
-            onChange={(e) => setTyped(e.target.value)}
-            autoComplete="off"
-            autoCapitalize="none"
-            spellCheck={false}
-          />
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setConfirming(null);
-                setTyped("");
-              }}
-              disabled={pending}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => run(() => deleteRoom(roomId, typed))}
-              disabled={pending || typed.trim().toLowerCase().replace(/^#/, "") !== handle}
-            >
-              {pending && <Loader2 className="animate-spin" aria-hidden="true" />}
-              Delete forever
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
+        </ConfirmDialog>
       )}
     </div>
   );

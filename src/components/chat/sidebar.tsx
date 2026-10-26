@@ -8,12 +8,16 @@ import { RoomLink } from "@/components/chat/room-link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button, buttonVariants } from "@/components/ui/button";
 import type { CurrentUser } from "@/lib/auth/current-user";
-import { fetchMyRooms, fetchPublicRooms } from "@/lib/chat/data";
+import { fetchMyDepartures, fetchMyRooms, fetchPublicRooms } from "@/lib/chat/data";
 import { createClient } from "@/lib/supabase/server";
 
 export async function Sidebar({ user }: { user: CurrentUser }) {
   const supabase = await createClient();
-  const [rooms, publicRooms] = await Promise.all([fetchMyRooms(supabase, user.id), fetchPublicRooms(supabase)]);
+  const [rooms, publicRooms, departures] = await Promise.all([
+    fetchMyRooms(supabase, user.id),
+    fetchPublicRooms(supabase),
+    fetchMyDepartures(supabase, user.id),
+  ]);
   const channels = rooms.filter((r) => r.type !== "dm");
   const dms = rooms.filter((r) => r.type === "dm");
 
@@ -38,7 +42,7 @@ export async function Sidebar({ user }: { user: CurrentUser }) {
           ) : (
             <p className="px-2 py-1 text-sm text-muted-foreground">You haven&apos;t joined any rooms.</p>
           )}
-          <BrowseRoomsDialog rooms={publicRooms} joinedIds={channels.map((r) => r.id)} />
+          <BrowseRoomsDialog rooms={publicRooms} joinedIds={channels.map((r) => r.id)} departures={departures} />
         </section>
 
         <section aria-label="Direct messages" className="flex flex-col gap-0.5">

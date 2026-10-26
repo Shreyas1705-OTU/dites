@@ -6,7 +6,7 @@ import { MembersDialog, type RoomMember } from "@/components/chat/members-dialog
 import { RoomConversation } from "@/components/chat/room-conversation";
 import { RoomHeader } from "@/components/chat/room-header";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { fetchMessages, GENERAL_ROOM_ID, roomMention, roomTitle, type RoomType } from "@/lib/chat/data";
+import { fetchMessages, fetchMyDepartures, GENERAL_ROOM_ID, roomMention, roomTitle, type RoomType } from "@/lib/chat/data";
 import { createClient } from "@/lib/supabase/server";
 
 // Big rooms show the first members and a count.
@@ -40,10 +40,16 @@ async function Room({ params }: Pick<PageProps<"/chat/[roomId]">, "params">) {
 
   if (!membership) {
     if (type !== "public") notFound();
+    const departure = (await fetchMyDepartures(supabase, user.id))[room.id] ?? null;
     return (
       <>
         <RoomHeader type={type} title={roomTitle(room.id, room.name)} subtitle={room.description} isGlobal={room.id === GENERAL_ROOM_ID} />
-        <JoinRoom roomId={room.id} title={roomMention(room.id, room.name)} description={room.description} />
+        <JoinRoom
+          roomId={room.id}
+          title={roomMention(room.id, room.name)}
+          description={room.description}
+          departure={departure}
+        />
       </>
     );
   }
@@ -99,7 +105,7 @@ async function Room({ params }: Pick<PageProps<"/chat/[roomId]">, "params">) {
               members={members}
               total={membersResult?.count ?? members.length}
               handle={room.name ?? ""}
-              canLeave={membership.role === "member"}
+              canLeave={membership.role === "member" && room.id !== GENERAL_ROOM_ID}
               canDelete={membership.role === "owner"}
             />
           )

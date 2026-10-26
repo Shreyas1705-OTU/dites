@@ -14,7 +14,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { GENERAL_ROOM_ID } from "@/lib/chat/data";
+import { GENERAL_ROOM_ID, type Departure } from "@/lib/chat/data";
+import { RejoinCountdown } from "@/components/chat/join-room";
 import { normalizeRoomName } from "@/lib/chat/room-name";
 
 function ErrorText({ children }: { children?: string }) {
@@ -31,7 +32,15 @@ function ErrorText({ children }: { children?: string }) {
 // ---------------------------------------------------------------------------
 type PublicRoom = { id: string; name: string; description: string | null };
 
-export function BrowseRoomsDialog({ rooms, joinedIds }: { rooms: PublicRoom[]; joinedIds: string[] }) {
+export function BrowseRoomsDialog({
+  rooms,
+  joinedIds,
+  departures,
+}: {
+  rooms: PublicRoom[];
+  joinedIds: string[];
+  departures: Record<string, Departure>;
+}) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string>();
   const [, startTransition] = useTransition();
@@ -75,6 +84,12 @@ export function BrowseRoomsDialog({ rooms, joinedIds }: { rooms: PublicRoom[]; j
               </div>
               {joined.has(room.id) ? (
                 <span className="text-sm text-muted-foreground">Joined</span>
+              ) : departures[room.id]?.kind === "removed" ? (
+                <span className="text-sm text-muted-foreground">Removed by owner</span>
+              ) : departures[room.id]?.kind === "left" ? (
+                <span className="text-right text-sm text-muted-foreground">
+                  <RejoinCountdown rejoinAt={(departures[room.id] as { rejoinAt: string }).rejoinAt} />
+                </span>
               ) : (
                 <Button variant="secondary" size="sm" onClick={() => join(room.id)} disabled={pendingId !== null}>
                   {pendingId === room.id && <Loader2 className="animate-spin" aria-hidden="true" />}

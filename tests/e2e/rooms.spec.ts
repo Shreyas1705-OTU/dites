@@ -163,19 +163,46 @@ test("people search lists registered users from the first letter, not guests", a
   await fetch(`${LOCAL_API}/auth/v1/admin/users/${registered.id}`, { method: "DELETE", headers: adminHeaders() });
 });
 
-test("a member leaves a room and can rejoin it", async ({ page }) => {
+test("nobody can leave Global chat", async ({ page }) => {
   await signInAsGuest(page);
   await page.getByRole("button", { name: /^Members/ }).click();
   const dialog = page.getByRole("dialog", { name: "Members of Global chat" });
-  await dialog.getByRole("button", { name: "Leave room" }).click();
-  await dialog.getByRole("button", { name: "Leave", exact: true }).click();
+  await expect(dialog.getByText("Anyone signed in can join this room.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Leave room" })).toHaveCount(0);
+});
 
-  // No longer a member: Global chat offers to join instead of showing messages.
-  await expect(page.getByRole("button", { name: "Join Global chat" })).toBeVisible();
-  const nav = await openNav(page);
-  await expect(nav.getByRole("link", { name: "Global chat" })).toHaveCount(0);
-  if ((page.viewportSize()?.width ?? 1280) < 768) await page.keyboard.press("Escape");
+test("leaving a public room asks first, then blocks rejoining for 5 days", async ({ page }) => {
+  test.skip(!SECRET_KEY, "SUPABASE_SECRET_KEY not set");
+  // An ownerless public room to join and leave.
+  const [room] = await (
+    await fetch(`${LOCAL_API}/rest/v1/rooms`, {
+      method: "POST",
+      headers: { ...adminHeaders(), Prefer: "return=representation" },
+      body: JSON.stringify({ type: "public", name: `leave-${Date.now().toString(36)}` }),
+    })
+  ).json();
 
-  await page.getByRole("button", { name: "Join Global chat" }).click();
-  await expect(page.getByRole("textbox", { name: "Message Global chat" })).toBeVisible();
+  await signInAsGuest(page);
+  await page.goto(`/chat/${room.id}`);
+  await page.getByRole("button", { name: `Join #${room.name}` }).click();
+  await expect(page.getByRole("textbox", { name: `Message #${room.name}` })).toBeVisible();
+
+  await page.getByRole("button", { name: /^Members/ }).click();
+  await page.getByRole("button", { name: "Leave room" }).click();
+  const confirm = page.getByRole("alertdialog", { name: `Leave #${room.name}?` });
+  await expect(confirm.getByText("you won't be able to rejoin for 5 days")).toBeVisible();
+
+  // Cancel really cancels.
+  await confirm.getByRole("button", { name: "Cancel" }).click();
+  await expect(confirm).toHaveCount(0);
+  await page.getByRole("button", { name: "Leave room" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Leave room" }).click();
+  await expect(page).toHaveURL(new RegExp(`/chat/${GENERAL_ROOM_ID}$`));
+
+  // Coming back: no Join button, a disabled countdown instead.
+  await page.goto(`/chat/${room.id}`);
+  await expect(page.getByRole("button", { name: "Rejoin in 5 days" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: `Join #${room.name}` })).toHaveCount(0);
+
+  await fetch(`${LOCAL_API}/rest/v1/rooms?id=eq.${room.id}`, { method: "DELETE", headers: adminHeaders() });
 });

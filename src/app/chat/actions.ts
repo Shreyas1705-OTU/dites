@@ -31,9 +31,10 @@ export async function joinRoom(roomId: string): Promise<ActionResult> {
   if (!userId) return { error: "Your session ended. Sign in again." };
 
   const { error } = await supabase.from("room_members").insert({ room_id: roomId, user_id: userId });
-  // 23505: already a member, which is fine.
+  // 23505: already a member, which is fine. 42501: RLS refused it, e.g.
+  // you were removed, or left less than 5 days ago.
   if (error && error.code !== "23505") {
-    return { error: "You can't join this room." };
+    return { error: "You can't rejoin this room right now." };
   }
   revalidatePath("/chat", "layout");
   redirect(`/chat/${roomId}`);
