@@ -136,7 +136,9 @@ export function ChatShell({ sidebar, children }: { sidebar: React.ReactNode; chi
             {sidebar}
           </SheetContent>
         </Sheet>
-        <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        <main id="main-content" className="flex min-w-0 flex-1 flex-col">
+          {children}
+        </main>
       </div>
     </NavContext>
   );

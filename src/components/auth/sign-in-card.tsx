@@ -2,7 +2,7 @@
 
 import { Loader2, UserRound } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import { GitHubIcon, GoogleIcon } from "@/components/auth/provider-icons";
 import { Turnstile } from "@/components/auth/turnstile";
@@ -23,16 +23,36 @@ function guestErrorMessage(code: string | undefined): string {
   return "Couldn't start a guest session. Check your connection and try again.";
 }
 
+// Read at click time rather than with useSearchParams(), so the card renders
+// in the static HTML (no skeleton swap, no layout shift on load).
+function nextPath() {
+  return safeNextPath(new URLSearchParams(window.location.search).get("next"));
+}
+
+// An error passed back by the OAuth callback (?auth_error=code). It reads the
+// URL, so it streams in separately and the rest of the card stays static.
+function UrlAuthError() {
+  const message = authErrorMessage(useSearchParams().get("auth_error"));
+  if (!message) return null;
+  return <ErrorBanner>{message}</ErrorBanner>;
+}
+
+function ErrorBanner({ children }: { children: React.ReactNode }) {
+  return (
+    <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+      {children}
+    </p>
+  );
+}
+
 export function SignInCard() {
   const router = useRouter();
-  const params = useSearchParams();
-  const next = safeNextPath(params.get("next"));
 
   const [token, setToken] = useState<string | null>(null);
   const [captchaBroken, setCaptchaBroken] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [pending, setPending] = useState<Pending>(null);
-  const [error, setError] = useState<string | null>(() => authErrorMessage(params.get("auth_error")));
+  const [error, setError] = useState<string | null>(null);
 
   async function signInAsGuest() {
     if (!token) return;
@@ -47,7 +67,7 @@ export function SignInCard() {
       setError(guestErrorMessage(error.code));
       return;
     }
-    router.replace(next);
+    router.replace(nextPath());
     router.refresh();
   }
 
@@ -57,7 +77,7 @@ export function SignInCard() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: { redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(nextPath())}` },
     });
     // On success the browser is already navigating to the provider.
     if (error) {
@@ -78,32 +98,36 @@ export function SignInCard() {
         </p>
       </div>
 
-      {error && (
-        <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
-          {error}
-        </p>
-      )}
+      <Suspense fallback={null}>
+        <UrlAuthError />
+      </Suspense>
+      {error && <ErrorBanner>{error}</ErrorBanner>}
 
       <div className="flex flex-col gap-3">
-        <Button size="lg" onClick={signInAsGuest} disabled={busy || !token} aria-busy={pending === "guest"}>
-          {pending === "guest" || (!token && !captchaBroken) ? (
-            <Loader2 className="animate-spin" aria-hidden="true" />
-          ) : (
-            <UserRound aria-hidden="true" />
+        {/* The captcha sits inside the guest group: once it loads it's usually
+            invisible, and outside this group it would add a gap and push the
+            buttons below down. */}
+        <div className="flex flex-col">
+          <Button size="lg" onClick={signInAsGuest} disabled={busy || !token} aria-busy={pending === "guest"}>
+            {pending === "guest" || (!token && !captchaBroken) ? (
+              <Loader2 className="animate-spin" aria-hidden="true" />
+            ) : (
+              <UserRound aria-hidden="true" />
+            )}
+            {pending === "guest" ? "Starting your session…" : guestLabel}
+          </Button>
+          <Turnstile
+            onToken={setToken}
+            onError={() => setCaptchaBroken(true)}
+            resetKey={resetKey}
+          />
+          {captchaBroken && (
+            <p className="pt-3 text-sm text-muted-foreground">
+              The captcha didn&apos;t load. A content blocker may be stopping it; you can still continue with GitHub
+              or Google.
+            </p>
           )}
-          {pending === "guest" ? "Starting your session…" : guestLabel}
-        </Button>
-        <Turnstile
-          onToken={setToken}
-          onError={() => setCaptchaBroken(true)}
-          resetKey={resetKey}
-        />
-        {captchaBroken && (
-          <p className="text-sm text-muted-foreground">
-            The captcha didn&apos;t load. A content blocker may be stopping it; you can still continue with GitHub
-            or Google.
-          </p>
-        )}
+        </div>
 
         <div className="flex items-center gap-3 py-1 text-xs tracking-[0.06em] text-muted-foreground uppercase">
           <span className="h-px flex-1 bg-border" />

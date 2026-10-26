@@ -102,7 +102,9 @@ export function MessageList({
       role="log"
       aria-label="Messages"
       aria-live="polite"
-      className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-3 py-4 sm:px-6"
+      // Focusable so keyboard users can scroll the history (arrow keys, Page Up).
+      tabIndex={0}
+      className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto px-3 py-4 outline-none sm:px-6 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
     >
       <ol className="flex flex-col-reverse gap-0.5">
         {messages.map((message, i) => {
@@ -116,11 +118,19 @@ export function MessageList({
 
           return (
             <Fragment key={message.id}>
-              <li className={`flex flex-col ${mine ? "items-end" : "items-start"} ${grouped ? "" : "pt-3"}`}>
+              {/* content-visibility skips layout and paint for off-screen messages, so
+                  long loaded histories stay fast without a virtualization library. */}
+              <li
+                className={`flex flex-col [contain-intrinsic-size:auto_3rem] [content-visibility:auto] ${mine ? "items-end" : "items-start"} ${grouped ? "" : "pt-3"}`}
+              >
                 {!grouped && (
                   <div className={`flex items-baseline gap-2 pb-1 text-xs ${mine ? "flex-row-reverse" : ""}`}>
                     <span className="font-semibold text-foreground">{mine ? "You" : message.author.displayName}</span>
-                    {!mine && <span className="text-muted-foreground">@{message.author.username}</span>}
+                    {!mine && (
+                      <span translate="no" className="text-muted-foreground">
+                        @{message.author.username}
+                      </span>
+                    )}
                     <MessageTime iso={message.createdAt} className="text-muted-foreground tabular-nums" />
                   </div>
                 )}

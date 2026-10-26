@@ -24,7 +24,7 @@ export async function Sidebar({ user }: { user: CurrentUser }) {
   return (
     <nav aria-label="Rooms and direct messages" className="flex h-full min-h-0 flex-col">
       <div className="flex h-14 shrink-0 items-center px-4">
-        <Link href="/chat" className="font-heading text-2xl font-semibold tracking-tight">
+        <Link href="/chat" translate="no" className="font-heading text-2xl font-semibold tracking-tight">
           Dites
         </Link>
       </div>
@@ -71,7 +71,7 @@ export async function Sidebar({ user }: { user: CurrentUser }) {
           </span>
           <div className="flex min-w-0 flex-1 flex-col leading-tight">
             <span className="truncate text-sm font-medium">{user.displayName}</span>
-            <span className="truncate text-xs text-muted-foreground">
+            <span translate="no" className="truncate text-xs text-muted-foreground">
               @{user.username}
               {user.isGuest && " · Guest"}
             </span>

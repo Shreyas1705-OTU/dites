@@ -113,8 +113,9 @@ export function MembersDialog({
         {canManage && (
           <div className="flex flex-col gap-2">
             <Input
+              name="add-member"
               aria-label="Add people by name or username"
-              placeholder="Add people by name or @username"
+              placeholder="Add people by name or @username…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               autoComplete="off"
@@ -162,7 +163,11 @@ export function MembersDialog({
           </p>
         )}
 
-        <ul className="-mx-2 flex max-h-[45vh] flex-col overflow-y-auto" aria-label="Members">
+        <ul
+          tabIndex={0}
+          className="-mx-2 flex max-h-[45vh] flex-col overflow-y-auto overscroll-contain rounded-lg outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+          aria-label="Members"
+        >
           {members.map((member) => (
             <li key={member.id} className="flex items-center gap-3 rounded-lg px-2 py-1.5">
               <Avatar name={member.displayName} />
@@ -171,7 +176,7 @@ export function MembersDialog({
                   {member.displayName}
                   {member.id === currentUserId && <span className="font-normal text-muted-foreground"> (you)</span>}
                 </span>
-                <span className="truncate text-xs text-muted-foreground">@{member.username}</span>
+                <span translate="no" className="truncate text-xs text-muted-foreground">@{member.username}</span>
               </span>
               {member.role === "owner" && (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -282,6 +287,7 @@ function RoomDangerZone({
             </label>
             <Input
               id={`confirm-${roomId}`}
+              name="confirm-room-name"
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               autoComplete="off"

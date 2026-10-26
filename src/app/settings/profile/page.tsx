@@ -10,7 +10,7 @@ import { ProfileForm } from "./profile-form";
 
 export default function ProfileSettingsPage({ searchParams }: PageProps<"/settings/profile">) {
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-6 sm:px-6">
+    <main id="main-content" className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-6 sm:px-6">
       {/* A real link styled as a button, so assistive tech announces navigation */}
       <Link href="/chat" className={buttonVariants({ variant: "ghost", className: "self-start" })}>
         <ArrowLeft aria-hidden="true" />

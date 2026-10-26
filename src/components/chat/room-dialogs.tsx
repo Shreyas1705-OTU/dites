@@ -68,7 +68,11 @@ export function BrowseRoomsDialog({
           <DialogDescription>Anyone signed in can read and join these.</DialogDescription>
         </DialogHeader>
         <ErrorText>{error}</ErrorText>
-        <ul className="-mx-2 flex max-h-[50vh] flex-col overflow-y-auto">
+        <ul
+          tabIndex={0}
+          aria-label="Public rooms"
+          className="-mx-2 flex max-h-[50vh] flex-col overflow-y-auto overscroll-contain rounded-lg outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        >
           {rooms.map((room) => (
             <li key={room.id} className="flex items-center gap-3 rounded-lg px-2 py-2.5">
               {room.id === GENERAL_ROOM_ID ? (
@@ -232,10 +236,11 @@ export function NewDmDialog() {
         </DialogHeader>
         <div className="relative">
           <Input
+            name="find-person"
             aria-label="Name or username"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Name or @username"
+            placeholder="Name or @username…"
             autoComplete="off"
             autoCapitalize="none"
             spellCheck={false}

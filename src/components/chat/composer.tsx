@@ -53,10 +53,12 @@ export function Composer({ placeholder, onSend }: Props) {
           ref={textarea}
           value={body}
           rows={1}
+          name="message"
+          autoComplete="off"
           aria-label={placeholder}
           aria-describedby={length > MAX_MESSAGE_LENGTH - 200 ? counterId : undefined}
           aria-invalid={tooLong}
-          placeholder={placeholder}
+          placeholder={`${placeholder}…`}
           onChange={(e) => {
             setBody(e.target.value);
             resize();

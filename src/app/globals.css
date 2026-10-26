@@ -140,6 +140,9 @@
   }
   html {
     @apply font-sans;
+    /* No double-tap zoom delay on buttons and links; a subtle tap flash. */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgb(38 97 156 / 0.15);
   }
   h1, h2, h3 {
     @apply font-heading;
